@@ -7,9 +7,11 @@ This specification outlines the requirements for a **React Native Android Applic
 ## **1. General Overview**
 
 - **Platform:** Native Android Application (React Native).
+- **Framework**: Expo (Managed Workflow with Expo Router).
+- **Language**: TypeScript (.ts / .tsx).
 - **Backend:** Firebase (Authentication & Realtime Database/Firestore).
 - **Connectivity:** Online only (Internet connection required).
-- **Printing:** Integration with Bluetooth Thermal Printers for receipts.
+- **Printing:** Integration with Bluetooth Thermal Printers for receipts (Requires npx expo prebuild in final phase).
 - **Security:** Role-based access (Admin vs. Regular Staff).
 
 ---
@@ -142,5 +144,21 @@ This specification outlines the requirements for a **React Native Android Applic
   - **Pricing Collection:** Stores the price matrix.
   - **Washers Collection:** Simple list of names.
 
+## **4. Technical Architecture**
 
-  
+- **Navigation:** **Expo Router** (File-based routing in the `app/` directory).
+- **State Management:** React Context API (`AuthContext` for user session).
+- **UI Library:** React Native Paper (Material Design 3).
+- **Theme:** Custom Blue/White branding defined in `app/_layout.tsx`.
+
+## **5. Folder Structure Strategy**
+
+- **`app/`**: Contains only screens/routes.
+  - `app/(auth)/`: Login routes (accessible when logged out).
+  - `app/(app)/`: Protected routes (Dashboard, New Record).
+  - `app/(admin)/`: Admin-only routes.
+- **`src/`**: Contains all logic and reusable UI.
+  - `src/components/`: Reusable UI (Forms, Cards, Lists).
+  - `src/context/`: Auth state.
+  - `src/services/`: Firebase & Printer logic.
+  - `src/utils/`: Pricing logic, Constants, Types.
