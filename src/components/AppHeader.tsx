@@ -1,7 +1,7 @@
-import React from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
-import { Text, Button, useTheme } from "react-native-paper";
 import { router } from "expo-router";
+import React from "react";
+import { Dimensions, StyleSheet, View } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;

@@ -1,15 +1,15 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Dimensions,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
-import { Text, TextInput, Button, useTheme } from "react-native-paper";
+import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;

@@ -4,17 +4,17 @@
 
 ### Developer A (UI & Routes)
 
-- [ ] **Setup Theme**
-  - [ ] Open `app/_layout.tsx`.
-  - [ ] Configure `PaperProvider` with the Blue/White theme.
-- [ ] **Create Route Groups**
-  - [ ] Create folder `app/(auth)`.
-  - [ ] Create folder `app/(app)`.
-  - [ ] Create folder `app/(admin)`.
-- [ ] **Login UI**
-  - [ ] Create `app/(auth)/index.tsx` (Login Screen).
-  - [ ] Build form (Email/Password) using React Native Paper.
-  - [ ] _Note:_ Do not implement logic yet, just the UI.
+- [x] **Setup Theme**
+  - [x] Open `app/_layout.tsx`.
+  - [x] Configure `PaperProvider` with the Blue/White theme.
+- [x] **Create Route Groups**
+  - [x] Create folder `app/(auth)`.
+  - [x] Create folder `app/(app)`.
+  - [x] Create folder `app/(admin)`.
+- [x] **Login UI**
+  - [x] Create `app/(auth)/index.tsx` (Login Screen).
+  - [x] Build form (Email/Password) using React Native Paper.
+  - [x] _Note:_ Do not implement logic yet, just the UI.
 
 ### Developer B (Logic & Backend)
 

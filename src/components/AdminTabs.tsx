@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
+import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 
 const { width } = Dimensions.get("window");
@@ -25,10 +25,12 @@ export default function AdminTabs({
 
   const getIcon = (iconName: string) => {
     const icons: { [key: string]: string } = {
-      customers: "👥",
       vehicles: "🚗",
       companies: "🏢",
       discounts: "%",
+      Washers: "👥",
+      Pricing: "💰",
+      AppUsers: "👤",
     };
     return icons[iconName] || "";
   };

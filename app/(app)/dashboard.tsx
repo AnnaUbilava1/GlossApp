@@ -1,16 +1,15 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    View
 } from "react-native";
-import { Text, DataTable, IconButton, useTheme, Button } from "react-native-paper";
+import { Button, DataTable, IconButton, Text, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../src/components/AppHeader";
 import TabNavigation from "../../src/components/TabNavigation";
-import { router } from "expo-router";
 import { getStatusColor, getStatusLabel } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");

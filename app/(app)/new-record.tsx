@@ -1,23 +1,22 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
+    Dimensions,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 import {
-  Text,
-  TextInput,
-  Button,
-  SegmentedButtons,
-  useTheme,
+    Button,
+    Text,
+    TextInput,
+    useTheme
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../src/components/AppHeader";
 import TabNavigation from "../../src/components/TabNavigation";
-import { router } from "expo-router";
 import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");

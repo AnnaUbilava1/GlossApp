@@ -1,21 +1,21 @@
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 import {
-  Text,
-  IconButton,
-  Button,
-  useTheme,
-  Card,
+    Button,
+    Card,
+    IconButton,
+    Text,
+    useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
-import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
