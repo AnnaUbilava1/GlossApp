@@ -27,14 +27,53 @@
   - [ ] Install firebase packages (`@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/firestore`).
   - [ ] Create `src/config/firebase.ts`.
   - [ ] Initialize Firebase with your project credentials.
-- [ ] **Constants & Hard-Coded Data**
+- [ ] **Environment Variables Setup** ⭐ PRIORITY
+  - [ ] Install `react-native-dotenv`: `npm install react-native-dotenv`
+  - [ ] Install types: `npm install -D @types/react-native-dotenv`
+  - [ ] Create `.env` file in project root (will NOT be committed to Git).
+  - [ ] Add to `.env`:
+    ```
+    MASTER_PIN=1234
+    ```
+  - [ ] Create `.env.example` file (will be committed as template):
+    ```
+    MASTER_PIN=your_pin_here
+    ```
+  - [ ] Update `.gitignore` to include `.env` (if not already there).
+  - [ ] Configure babel.config.js to use dotenv:
+    ```javascript
+    module.exports = function(api) {
+      api.cache(true);
+      return {
+        presets: ['babel-preset-expo'],
+        plugins: [
+          ['module:react-native-dotenv', {
+            moduleName: '@env',
+            path: '.env',
+          }]
+        ]
+      };
+    };
+    ```
+  - [ ] Create type definitions file `src/types/env.d.ts`:
+    ```typescript
+    declare module '@env' {
+      export const MASTER_PIN: string;
+    }
+    ```
+- [ ] **Constants & Hard-Coded Data**  PRIORITY
   - [ ] Create `src/utils/constants.ts`.
   - [ ] Define `CAR_TYPES` array: `['Sedan', 'Jeep', 'Big Jeep', 'Premium', 'Hatchback', 'Minivan', 'Truck']`.
   - [ ] Define `SERVICE_TYPES` array: `['Complete Wash', 'Outer Wash', 'Engine Wash', 'Interior Clean', 'Wax & Polish']` (adjust as needed).
   - [ ] Define `BOX_NUMBERS` array: `['Box 1', 'Box 2', 'Box 3', 'Box 4']` (adjust as needed).
-  - [ ] Define `MASTER_PIN` constant (e.g., `'1234'` - should be changed in production).
   - [ ] Define `PHYSICAL_PERSON` constant: `'Physical Person'`.
-- [ ] **Types Definition**
+  - [ ] Define `DISCOUNT_OPTIONS` array: `[10, 20, 30, 50]` (percentages).
+  - [ ] **Import Master PIN from environment**: 
+    ```typescript
+    import { MASTER_PIN } from '@env';
+    export { MASTER_PIN };
+    ```
+- [ ] **Types Definition**  PRIORITY
   - [ ] Create `src/utils/types.ts`.
   - [ ] Define `UserRole` type: `'admin' | 'staff'`.
   - [ ] Define `PaymentMethod` type: `'cash' | 'card' | null`.
@@ -65,6 +104,7 @@
 - [ ] **Connect Login UI**
   - [ ] Wire `app/(auth)/index.tsx` to `signIn` function from AuthContext.
   - [ ] Handle loading and error states.
+
 
 ---
 
