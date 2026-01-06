@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
@@ -23,16 +24,16 @@ export default function AdminTabs({
 }: AdminTabsProps) {
   const theme = useTheme();
 
-  const getIcon = (iconName: string) => {
+  const getIconName = (iconName: string): string => {
     const icons: { [key: string]: string } = {
-      vehicles: "🚗",
-      companies: "🏢",
-      discounts: "%",
-      Washers: "👥",
-      Pricing: "💰",
-      AppUsers: "👤",
+      vehicles: "car-multiple",
+      companies: "office-building",
+      discounts: "percent-outline",
+      washers: "account-group",
+      pricing: "currency-usd",
+      appusers: "account-multiple",
     };
-    return icons[iconName] || "";
+    return icons[iconName] || "help-circle";
   };
 
   return (
@@ -52,7 +53,11 @@ export default function AdminTabs({
             ]}
             onPress={() => onTabChange(tab.key)}
           >
-            <Text style={styles.icon}>{getIcon(tab.icon)}</Text>
+            <MaterialCommunityIcons
+              name={getIconName(tab.icon) as any}
+              size={20}
+              color={isActive ? theme.colors.primary : "#757575"}
+            />
             <Text
               variant="bodyMedium"
               style={[
@@ -86,9 +91,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     gap: 8,
-  },
-  icon: {
-    fontSize: 18,
   },
   tabText: {
     color: "#757575",

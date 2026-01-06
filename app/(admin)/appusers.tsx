@@ -1,17 +1,18 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  View,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 import {
-  Button,
-  DataTable,
-  IconButton,
-  Text,
-  useTheme,
+    Button,
+    Chip,
+    DataTable,
+    IconButton,
+    Text,
+    useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
@@ -21,35 +22,37 @@ const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
 // Mock data
-const mockCompanies = [
+const mockUsers = [
   {
     id: "1",
-    name: "Company1",
-    contactPerson: "Bob Johnson",
-    email: "contact@company1.com",
-    phone: "+1234567892",
-    defaultDiscount: 30,
+    email: "admin@carwash.com",
+    role: "admin",
+    name: "John Doe",
   },
   {
     id: "2",
-    name: "Company2",
-    contactPerson: "Alice Brown",
-    email: "contact@company2.com",
-    phone: "+1234567893",
-    defaultDiscount: 50,
+    email: "staff1@carwash.com",
+    role: "staff",
+    name: "Mike Johnson",
+  },
+  {
+    id: "3",
+    email: "staff2@carwash.com",
+    role: "staff",
+    name: "Sarah Williams",
   },
 ];
 
-export default function CompaniesScreen() {
+export default function AppUsersScreen() {
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState("companies");
-  const [companies] = useState(mockCompanies);
+  const [activeTab, setActiveTab] = useState("appusers");
+  const [users] = useState(mockUsers);
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
       router.push("/(admin)/vehicles");
     } else if (key === "companies") {
-      // Already here
+      router.push("/(admin)/companies");
     } else if (key === "discounts") {
       router.push("/(admin)/discounts");
     } else if (key === "washers") {
@@ -57,23 +60,23 @@ export default function CompaniesScreen() {
     } else if (key === "pricing") {
       router.push("/(admin)/pricing");
     } else if (key === "appusers") {
-      router.push("/(admin)/appusers");
+      // Already here
     }
   };
 
-  const handleAddCompany = () => {
-    // TODO: Implement add company modal
-    console.log("Add company");
+  const handleAddUser = () => {
+    // TODO: Implement add user modal
+    console.log("Add user");
   };
 
-  const handleEdit = (id: string) => {
-    // TODO: Implement edit company
-    console.log("Edit company", id);
+  const handleResetPassword = (id: string) => {
+    // TODO: Implement reset password
+    console.log("Reset password for user", id);
   };
 
   const handleDelete = (id: string) => {
-    // TODO: Implement delete company with PIN check
-    console.log("Delete company", id);
+    // TODO: Implement delete user with PIN check
+    console.log("Delete user", id);
   };
 
   return (
@@ -97,52 +100,57 @@ export default function CompaniesScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Partner Companies
+              Staff User Management
             </Text>
             <Button
               mode="contained"
               icon="plus"
-              onPress={handleAddCompany}
+              onPress={handleAddUser}
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
-              Add Company
+              Add User
             </Button>
           </View>
 
           {isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>Company Name</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Contact Person</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>Name</DataTable.Title>
                 <DataTable.Title style={styles.headerCell}>Email</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Phone</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Default Discount</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>Role</DataTable.Title>
                 <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
               </DataTable.Header>
 
-              {companies.map((company) => (
-                <DataTable.Row key={company.id} style={styles.tableRow}>
-                  <DataTable.Cell style={styles.cell}>{company.name}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.contactPerson}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.email}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.phone}</DataTable.Cell>
+              {users.map((user) => (
+                <DataTable.Row key={user.id} style={styles.tableRow}>
+                  <DataTable.Cell style={styles.cell}>{user.name}</DataTable.Cell>
+                  <DataTable.Cell style={styles.cell}>{user.email}</DataTable.Cell>
                   <DataTable.Cell style={styles.cell}>
-                    <Text style={styles.discountText}>{company.defaultDiscount}%</Text>
+                    <Chip
+                      mode="flat"
+                      style={[
+                        styles.roleChip,
+                        user.role === "admin" && styles.adminChip,
+                      ]}
+                      textStyle={styles.chipText}
+                    >
+                      {user.role === "admin" ? "Admin" : "Staff"}
+                    </Chip>
                   </DataTable.Cell>
                   <DataTable.Cell style={styles.actionsCell}>
                     <View style={styles.actionsContainer}>
                       <IconButton
-                        icon="pencil"
+                        icon="key"
                         size={20}
-                        iconColor="#2F80ED"
-                        onPress={() => handleEdit(company.id)}
+                        iconColor="#FF9800"
+                        onPress={() => handleResetPassword(user.id)}
                       />
                       <IconButton
                         icon="delete"
                         size={20}
                         iconColor="#D32F2F"
-                        onPress={() => handleDelete(company.id)}
+                        onPress={() => handleDelete(user.id)}
                       />
                     </View>
                   </DataTable.Cell>
@@ -151,33 +159,38 @@ export default function CompaniesScreen() {
             </DataTable>
           ) : (
             <View style={styles.mobileContainer}>
-              {companies.map((company) => (
-                <View key={company.id} style={styles.mobileCard}>
+              {users.map((user) => (
+                <View key={user.id} style={styles.mobileCard}>
                   <View style={styles.mobileCardHeader}>
-                    <Text variant="titleMedium">{company.name}</Text>
-                    <Text style={[styles.discountText, { fontSize: 16 }]}>
-                      {company.defaultDiscount}%
-                    </Text>
+                    <Text variant="titleMedium">{user.name}</Text>
+                    <Chip
+                      mode="flat"
+                      style={[
+                        styles.roleChip,
+                        user.role === "admin" && styles.adminChip,
+                      ]}
+                      textStyle={styles.chipText}
+                    >
+                      {user.role === "admin" ? "Admin" : "Staff"}
+                    </Chip>
                   </View>
-                  <Text variant="bodyMedium">{company.contactPerson}</Text>
-                  <Text variant="bodySmall" style={styles.mobileDetails}>
-                    {company.email}
-                  </Text>
-                  <Text variant="bodySmall" style={styles.mobileDetails}>
-                    {company.phone}
+                  <Text variant="bodyMedium" style={styles.mobileEmail}>
+                    {user.email}
                   </Text>
                   <View style={styles.mobileActions}>
-                    <IconButton
-                      icon="pencil"
-                      size={20}
-                      iconColor="#2F80ED"
-                      onPress={() => handleEdit(company.id)}
-                    />
+                    <Button
+                      mode="outlined"
+                      icon="key"
+                      onPress={() => handleResetPassword(user.id)}
+                      style={styles.resetButton}
+                    >
+                      Reset Password
+                    </Button>
                     <IconButton
                       icon="delete"
                       size={20}
                       iconColor="#D32F2F"
-                      onPress={() => handleDelete(company.id)}
+                      onPress={() => handleDelete(user.id)}
                     />
                   </View>
                 </View>
@@ -240,12 +253,17 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
   },
-  discountText: {
-    color: "#2F80ED",
-    fontWeight: "600",
+  roleChip: {
+    backgroundColor: "#E3F2FD",
+  },
+  adminChip: {
+    backgroundColor: "#FFF3E0",
+  },
+  chipText: {
+    fontSize: 12,
   },
   actionsCell: {
-    flex: 0.8,
+    flex: 1,
     justifyContent: "center",
   },
   actionsContainer: {
@@ -268,14 +286,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  mobileDetails: {
+  mobileEmail: {
     color: "#757575",
-    marginTop: 4,
+    marginBottom: 12,
   },
   mobileActions: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
+    gap: 8,
+  },
+  resetButton: {
+    flex: 1,
   },
 });
 

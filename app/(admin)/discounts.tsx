@@ -1,17 +1,17 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    View,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 import {
-    Button,
-    Card,
-    IconButton,
-    Text,
-    useTheme,
+  Button,
+  Card,
+  IconButton,
+  Text,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
@@ -54,14 +54,18 @@ export default function DiscountsScreen() {
   const [discounts] = useState(mockDiscounts);
 
   const handleTabChange = (key: string) => {
-    if (key === "customers") {
-      // TODO: Navigate to customers
-    } else if (key === "vehicles") {
+    if (key === "vehicles") {
       router.push("/(admin)/vehicles");
     } else if (key === "companies") {
       router.push("/(admin)/companies");
     } else if (key === "discounts") {
       // Already here
+    } else if (key === "washers") {
+      router.push("/(admin)/washers");
+    } else if (key === "pricing") {
+      router.push("/(admin)/pricing");
+    } else if (key === "appusers") {
+      router.push("/(admin)/appusers");
     }
   };
 
@@ -88,10 +92,12 @@ export default function DiscountsScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "customers", label: "Customers", icon: "customers" },
               { key: "vehicles", label: "Vehicles", icon: "vehicles" },
               { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "% Discounts", icon: "discounts" },
+              { key: "discounts", label: "Discounts", icon: "discounts" },
+              { key: "washers", label: "Washers", icon: "washers" },
+              { key: "pricing", label: "Pricing", icon: "pricing" },
+              { key: "appusers", label: "App Users", icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
