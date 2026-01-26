@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  staff
+}
+
+enum CarType {
+  SEDAN
+  PREMIUM_CLASS
+  SMALL_JEEP
+  BIG_JEEP
+  MICROBUS
+}
+
+enum WashType {
+  COMPLETE
+  INNER
+  OUTER
+  ENGINE
+  CHEMICAL
+}
+
+enum PaymentMethod {
+  cash
+  card
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // hashed password
+  role      UserRole @default(staff)
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdRecords WashRecord[] @relation("CreatedBy")
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  contact   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  washRecords WashRecord[]
+  discounts   Discount[]
+
+  @@map("companies")
+}
+
+model Vehicle {
+  id            String   @id @default(uuid())
+  licensePlate  String   @unique @map("licence_plate")
+  carCategory   CarType  @map("car_category")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  washRecords WashRecord[]
+
+  @@map("vehicles")
+}
+
+model WashRecord {
+  id                 String        @id @default(uuid())
+  
+  // Foreign Keys
+  vehicleId          String        @map("vehicle_id")
+  washerId          Int           @map("washer_id")
+  companyId         String?       @map("company_id")
+  discountId        String?       @map("discount_id")
+  createdById       String        @map("created_by_id")
+  
+  // Snapshot Data (preserved at time of transaction)
+  licensePlate      String        @map("licence_plate") // snapshot
+  companyName       String?       @map("company_name") // snapshot
+  discountPercentage Int          @default(0) @map("discount_percentage") // snapshot
+  carCategory       CarType       @map("car_category") // snapshot
+  washType          WashType      @map("wash_type") // snapshot
+  washerUsername    String        @map("washer_username") // snapshot
+  
+  // Pricing Fields
+  originalPrice     Decimal       @db.Decimal(10, 2) @map("original_price")
+  discountedPrice   Decimal       @db.Decimal(10, 2) @map("discounted_price")
+  washerCut         Decimal       @db.Decimal(10, 2) @map("washer_cut")
+  
+  // Status & Payment
+  paymentMethod     PaymentMethod? @map("payment_method")
+  startTime         DateTime      @default(now()) @map("start_time")
+  endTime           DateTime?     @map("end_time")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id])
+  washer    Washer    @relation(fields: [washerId], references: [id])
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  discount  Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
+  createdBy User      @relation("CreatedBy", fields: [createdById], references: [id])
+
+  @@map("wash_records")
+}
+
+model Washer {
+  id               Int      @id @default(autoincrement())
+  username         String   @unique
+  name             String?
+  surname          String?
+  contact          String?
+  active           Boolean  @default(true)
+  salaryPercentage Int      @default(0) @map("salary_percentage") // percentage of price washer receives
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  washRecords WashRecord[]
+
+  @@map("washers")
+}
+
+model Discount {
+  id         String   @id @default(uuid())
+  companyId  String   @map("company_id")
+  percentage Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  washRecords WashRecord[]
+
+  @@map("discounts")
+}
+
+model Pricing {
+  id          String      @id @default(uuid())
+  carCategory CarType     @map("car_category")
+  washType    WashType    @map("wash_type")
+  price       Decimal     @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@unique([carCategory, washType])
+  @@map("price_list")
+}
+
