@@ -10,8 +10,56 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 /**
- * GET /api/records
- * Get all wash records (with optional filters)
+ * @openapi
+ * /api/records:
+ *   get:
+ *     tags:
+ *       - Records
+ *     summary: Get all wash records
+ *     description: Retrieve all wash records with optional filtering
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [unfinished, finished_unpaid, paid]
+ *         description: Filter by status
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by start date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter by end date
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Limit number of results
+ *     responses:
+ *       200:
+ *         description: List of wash records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 records:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 router.get('/', async (req, res) => {
   try {
@@ -60,8 +108,38 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * GET /api/records/:id
- * Get a single wash record
+ * @openapi
+ * /api/records/{id}:
+ *   get:
+ *     tags:
+ *       - Records
+ *     summary: Get a single wash record
+ *     description: Retrieve a wash record by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Record ID
+ *     responses:
+ *       200:
+ *         description: Wash record retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Record not found
+ *       500:
+ *         description: Internal server error
  */
 router.get('/:id', async (req, res) => {
   try {
@@ -91,8 +169,64 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * POST /api/records
- * Create a new wash record
+ * @openapi
+ * /api/records:
+ *   post:
+ *     tags:
+ *       - Records
+ *     summary: Create a new wash record
+ *     description: Create a new wash record (requires authentication)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - licenseNumber
+ *               - carType
+ *               - serviceType
+ *               - price
+ *               - boxNumber
+ *               - washerName
+ *             properties:
+ *               licenseNumber:
+ *                 type: string
+ *               carType:
+ *                 type: string
+ *                 enum: [sedan, suv, truck, motorcycle]
+ *               serviceType:
+ *                 type: string
+ *                 enum: [basic, premium, deluxe]
+ *               price:
+ *                 type: number
+ *               boxNumber:
+ *                 type: integer
+ *               washerName:
+ *                 type: string
+ *               companyId:
+ *                 type: string
+ *               discountPercent:
+ *                 type: number
+ *                 default: 0
+ *     responses:
+ *       201:
+ *         description: Record created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 router.post(
   '/',
@@ -148,8 +282,65 @@ router.post(
 );
 
 /**
- * PUT /api/records/:id
- * Update a wash record (admin only, requires master PIN)
+ * @openapi
+ * /api/records/{id}:
+ *   put:
+ *     tags:
+ *       - Records
+ *     summary: Update a wash record
+ *     description: Update a wash record (admin only, requires master PIN)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Record ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - masterPin
+ *             properties:
+ *               masterPin:
+ *                 type: string
+ *               licenseNumber:
+ *                 type: string
+ *               carType:
+ *                 type: string
+ *               serviceType:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               isFinished:
+ *                 type: boolean
+ *               isPaid:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Record updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Invalid master PIN
+ *       404:
+ *         description: Record not found
+ *       500:
+ *         description: Internal server error
  */
 router.put(
   '/:id',
@@ -197,8 +388,53 @@ router.put(
 );
 
 /**
- * DELETE /api/records/:id
- * Delete a wash record (admin only, requires master PIN)
+ * @openapi
+ * /api/records/{id}:
+ *   delete:
+ *     tags:
+ *       - Records
+ *     summary: Delete a wash record
+ *     description: Delete a wash record (admin only, requires master PIN)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Record ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - masterPin
+ *             properties:
+ *               masterPin:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Record deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Invalid master PIN
+ *       404:
+ *         description: Record not found
+ *       500:
+ *         description: Internal server error
  */
 router.delete(
   '/:id',

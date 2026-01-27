@@ -8,8 +8,56 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 /**
- * POST /api/auth/login
- * User login endpoint
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: User login
+ *     description: Authenticate user and return JWT token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid credentials
  */
 router.post(
   '/login',
@@ -67,8 +115,38 @@ router.post(
 );
 
 /**
- * GET /api/auth/me
- * Get current user info (requires authentication)
+ * @openapi
+ * /api/auth/me:
+ *   get:
+ *     tags:
+ *       - Authentication
+ *     summary: Get current user info
+ *     description: Returns the authenticated user's information
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       404:
+ *         description: User not found
  */
 router.get('/me', async (req, res) => {
   try {
