@@ -92,6 +92,7 @@ model WashRecord {
   carCategory       CarType       @map("car_category") // snapshot
   washType          WashType      @map("wash_type") // snapshot
   washerUsername    String        @map("washer_username") // snapshot
+  boxNumber         Int           @default(0) @map("box_number")
   
   // Pricing Fields
   originalPrice     Decimal       @db.Decimal(10, 2) @map("original_price")

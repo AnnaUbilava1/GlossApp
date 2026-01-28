@@ -1,6 +1,6 @@
+import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -8,6 +8,182 @@ const prisma = new PrismaClient();
 
 // All routes require authentication
 router.use(authenticateToken);
+
+// Legacy (frontend) ↔ Schema mappings
+const LEGACY_CAR_TYPE_TO_SCHEMA = {
+  Sedan: 'SEDAN',
+  Hatchback: 'SEDAN',
+  Premium: 'PREMIUM_CLASS',
+  Jeep: 'SMALL_JEEP',
+  'Big Jeep': 'BIG_JEEP',
+  Minivan: 'MICROBUS',
+  Truck: 'BIG_JEEP',
+};
+
+const LEGACY_SERVICE_TYPE_TO_SCHEMA = {
+  'Complete Wash': 'COMPLETE',
+  'Outer Wash': 'OUTER',
+  'Interior Cleaning': 'INNER',
+  'Engine Wash': 'ENGINE',
+};
+
+const SCHEMA_CAR_TYPE_TO_LEGACY = {
+  SEDAN: 'Sedan',
+  PREMIUM_CLASS: 'Premium',
+  SMALL_JEEP: 'Jeep',
+  BIG_JEEP: 'Big Jeep',
+  MICROBUS: 'Minivan',
+};
+
+const SCHEMA_WASH_TYPE_TO_LEGACY = {
+  COMPLETE: 'Complete Wash',
+  OUTER: 'Outer Wash',
+  INNER: 'Interior Cleaning',
+  ENGINE: 'Engine Wash',
+  CHEMICAL: 'Complete Wash',
+};
+
+function toDecimalString(value) {
+  const num = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(num)) return null;
+  return num.toFixed(2);
+}
+
+function recordToLegacy(record) {
+  const discountPercent = record.discountPercentage ?? 0;
+  const discountedPriceNum = record.discountedPrice ? Number(record.discountedPrice) : 0;
+  const originalPriceNum = record.originalPrice ? Number(record.originalPrice) : 0;
+  const price = discountedPriceNum || originalPriceNum;
+
+  const isFinished = Boolean(record.endTime);
+  const isPaid = Boolean(record.paymentMethod);
+
+  const carType =
+    SCHEMA_CAR_TYPE_TO_LEGACY[record.carCategory] || String(record.carCategory || '');
+  const serviceType =
+    SCHEMA_WASH_TYPE_TO_LEGACY[record.washType] || String(record.washType || '');
+
+  const companyName = record.companyName || record.company?.name || null;
+  const companyDiscount =
+    discountPercent > 0
+      ? `${companyName || 'Physical Person'} ${discountPercent}%`
+      : companyName || 'Physical Person';
+
+  return {
+    // legacy fields expected by the current frontend
+    id: record.id,
+    licenseNumber: record.licensePlate,
+    carType,
+    serviceType,
+    companyDiscount,
+    discountPercent,
+    price,
+    boxNumber: record.boxNumber ?? 0,
+    washerName: record.washerUsername,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    isFinished,
+    isPaid,
+    paymentMethod: record.paymentMethod ?? undefined,
+    createdAt: record.createdAt,
+  };
+}
+
+async function resolveVehicleId({ licensePlate, carCategory }) {
+  const existing = await prisma.vehicle.findUnique({
+    where: { licensePlate },
+    select: { id: true, carCategory: true },
+  });
+
+  if (!existing) {
+    const created = await prisma.vehicle.create({
+      data: { licensePlate, carCategory },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
+  // Keep vehicle's category in sync if it changed
+  if (carCategory && existing.carCategory !== carCategory) {
+    await prisma.vehicle.update({
+      where: { licensePlate },
+      data: { carCategory },
+    });
+  }
+
+  return existing.id;
+}
+
+async function resolveWasher({ washerId, washerUsername }) {
+  if (washerId) {
+    const washer = await prisma.washer.findUnique({
+      where: { id: washerId },
+      select: { id: true, username: true, salaryPercentage: true },
+    });
+    if (!washer) return null;
+    return washer;
+  }
+
+  const username = washerUsername?.trim();
+  if (!username) return null;
+
+  const existing = await prisma.washer.findUnique({
+    where: { username },
+    select: { id: true, username: true, salaryPercentage: true },
+  });
+  if (existing) return existing;
+
+  return await prisma.washer.create({
+    data: { username, name: username, active: true },
+    select: { id: true, username: true, salaryPercentage: true },
+  });
+}
+
+async function resolveCompanySnapshot(companyId) {
+  if (!companyId) return { companyId: null, companyName: null };
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, name: true },
+  });
+  if (!company) return { companyId: null, companyName: null };
+  return { companyId: company.id, companyName: company.name };
+}
+
+async function resolveDiscountId({ companyId, discountPercentage }) {
+  if (!companyId || !discountPercentage || discountPercentage <= 0) return null;
+
+  const discount = await prisma.discount.findFirst({
+    where: { companyId, active: true, percentage: discountPercentage },
+    select: { id: true },
+  });
+
+  return discount?.id || null;
+}
+
+async function resolveOriginalPrice({ carCategory, washType, fallbackPrice }) {
+  const fallback = typeof fallbackPrice === 'number' ? fallbackPrice : Number(fallbackPrice);
+  if (Number.isFinite(fallback) && fallback >= 0) return fallback;
+
+  const pricing = await prisma.pricing.findUnique({
+    where: { carCategory_washType: { carCategory, washType } },
+    select: { price: true },
+  });
+
+  if (!pricing?.price) return null;
+  return Number(pricing.price);
+}
+
+function computeDiscountedPrice(originalPrice, discountPercentage) {
+  const discount = Number(discountPercentage) || 0;
+  const discounted = originalPrice * (1 - discount / 100);
+  return Math.max(0, discounted);
+}
+
+function computeWasherCut(discountedPrice, washerSalaryPercentage) {
+  const pct = Number(washerSalaryPercentage) || 0;
+  const cut = discountedPrice * (pct / 100);
+  return Math.max(0, cut);
+}
 
 /**
  * @openapi
@@ -68,12 +244,12 @@ router.get('/', async (req, res) => {
     const where = {};
     
     if (status === 'unfinished') {
-      where.isFinished = false;
+      where.endTime = null;
     } else if (status === 'finished_unpaid') {
-      where.isFinished = true;
-      where.isPaid = false;
+      where.endTime = { not: null };
+      where.paymentMethod = null;
     } else if (status === 'paid') {
-      where.isPaid = true;
+      where.paymentMethod = { not: null };
     }
 
     if (startDate || endDate) {
@@ -86,6 +262,9 @@ router.get('/', async (req, res) => {
       where,
       include: {
         company: true,
+        vehicle: true,
+        washer: true,
+        discount: true,
         createdBy: {
           select: {
             id: true,
@@ -100,7 +279,7 @@ router.get('/', async (req, res) => {
       take: parseInt(limit),
     });
 
-    res.json({ records });
+    res.json({ records: records.map(recordToLegacy), rawRecords: records });
   } catch (error) {
     console.error('Get records error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -147,6 +326,9 @@ router.get('/:id', async (req, res) => {
       where: { id: req.params.id },
       include: {
         company: true,
+        vehicle: true,
+        washer: true,
+        discount: true,
         createdBy: {
           select: {
             id: true,
@@ -161,7 +343,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Record not found' });
     }
 
-    res.json({ record });
+    res.json({ record: recordToLegacy(record), rawRecord: record });
   } catch (error) {
     console.error('Get record error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -175,7 +357,7 @@ router.get('/:id', async (req, res) => {
  *     tags:
  *       - Records
  *     summary: Create a new wash record
- *     description: Create a new wash record (requires authentication)
+ *     description: Create a new wash record (requires authentication). Accepts legacy frontend fields and maps them into the current database schema.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -188,29 +370,57 @@ router.get('/:id', async (req, res) => {
  *               - licenseNumber
  *               - carType
  *               - serviceType
- *               - price
- *               - boxNumber
  *               - washerName
  *             properties:
  *               licenseNumber:
  *                 type: string
+ *                 description: Legacy field (recommended for current frontend). Stored as WashRecord.licensePlate snapshot and Vehicle.licensePlate.
+ *               licensePlate:
+ *                 type: string
+ *                 description: Schema-style alias for licenseNumber.
  *               carType:
  *                 type: string
- *                 enum: [sedan, suv, truck, motorcycle]
+ *                 description: Legacy UI car category (mapped to schema enum CarType).
+ *                 enum: [Sedan, Jeep, Big Jeep, Premium, Hatchback, Minivan, Truck]
+ *               carCategory:
+ *                 type: string
+ *                 description: Schema enum CarType (e.g. SEDAN, PREMIUM_CLASS, SMALL_JEEP, BIG_JEEP, MICROBUS).
  *               serviceType:
  *                 type: string
- *                 enum: [basic, premium, deluxe]
+ *                 description: Legacy UI wash type (mapped to schema enum WashType).
+ *                 enum: [Complete Wash, Outer Wash, Interior Cleaning, Engine Wash]
+ *               washType:
+ *                 type: string
+ *                 description: Schema enum WashType (e.g. COMPLETE, OUTER, INNER, ENGINE, CHEMICAL).
  *               price:
  *                 type: number
+ *                 description: Optional override. If omitted, price is loaded from the Pricing matrix (carCategory + washType).
  *               boxNumber:
  *                 type: integer
+ *                 description: Legacy UI field; persisted in the database as wash_records.box_number.
  *               washerName:
  *                 type: string
+ *                 description: Legacy UI field. Used as washerUsername snapshot and to resolve/create a Washer.username.
+ *               washerUsername:
+ *                 type: string
+ *                 description: Schema-style alias for washerName.
+ *               washerId:
+ *                 type: integer
+ *                 description: Schema Washer.id (preferred if available).
  *               companyId:
  *                 type: string
  *               discountPercent:
  *                 type: number
  *                 default: 0
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [cash, card]
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
  *     responses:
  *       201:
  *         description: Record created successfully
@@ -221,6 +431,10 @@ router.get('/:id', async (req, res) => {
  *               properties:
  *                 record:
  *                   type: object
+ *                   description: Legacy-shaped record for current frontend compatibility.
+ *                 rawRecord:
+ *                   type: object
+ *                   description: Raw Prisma WashRecord including relations and Decimal fields (mostly for debugging/admin tooling).
  *       400:
  *         description: Validation error
  *       401:
@@ -231,12 +445,30 @@ router.get('/:id', async (req, res) => {
 router.post(
   '/',
   [
-    body('licenseNumber').notEmpty().withMessage('License number is required'),
-    body('carType').isIn(['sedan', 'suv', 'truck', 'motorcycle']),
-    body('serviceType').isIn(['basic', 'premium', 'deluxe']),
-    body('price').isFloat({ min: 0 }),
-    body('boxNumber').isInt({ min: 1 }),
-    body('washerName').notEmpty(),
+    body('licenseNumber')
+      .optional()
+      .isString()
+      .notEmpty()
+      .withMessage('licenseNumber must be a non-empty string'),
+    body('licensePlate')
+      .optional()
+      .isString()
+      .notEmpty()
+      .withMessage('licensePlate must be a non-empty string'),
+    body('carType').optional().isString(),
+    body('carCategory').optional().isString(),
+    body('serviceType').optional().isString(),
+    body('washType').optional().isString(),
+    body('discountPercent').optional().isFloat({ min: 0, max: 100 }),
+    body('price').optional().isFloat({ min: 0 }),
+    body('boxNumber').optional().isInt({ min: 0 }),
+    body('washerName').optional().isString(),
+    body('washerUsername').optional().isString(),
+    body('washerId').optional().isInt({ min: 1 }),
+    body('companyId').optional().isString(),
+    body('startTime').optional().isISO8601(),
+    body('endTime').optional().isISO8601(),
+    body('paymentMethod').optional().isIn(['cash', 'card']),
   ],
   async (req, res) => {
     try {
@@ -245,35 +477,97 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const {
-        licenseNumber,
-        carType,
-        serviceType,
-        companyId,
-        discountPercent = 0,
-        price,
-        boxNumber,
-        washerName,
-      } = req.body;
+      const licensePlate = (req.body.licensePlate || req.body.licenseNumber || '').trim();
+      if (!licensePlate) {
+        return res.status(400).json({ error: 'licenseNumber (or licensePlate) is required' });
+      }
+
+      const carCategory =
+        req.body.carCategory ||
+        LEGACY_CAR_TYPE_TO_SCHEMA[req.body.carType] ||
+        null;
+      if (!carCategory) {
+        return res.status(400).json({ error: 'carType (or carCategory) is required' });
+      }
+
+      const washType =
+        req.body.washType ||
+        LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType] ||
+        null;
+      if (!washType) {
+        return res.status(400).json({ error: 'serviceType (or washType) is required' });
+      }
+
+      const washer = await resolveWasher({
+        washerId: req.body.washerId ? Number(req.body.washerId) : null,
+        washerUsername: req.body.washerUsername || req.body.washerName,
+      });
+      if (!washer) {
+        return res.status(400).json({ error: 'washerName (or washerUsername/washerId) is required' });
+      }
+
+      const discountPercentage = Number(req.body.discountPercent) || 0;
+      const boxNumber =
+        req.body.boxNumber === undefined || req.body.boxNumber === null
+          ? 0
+          : Number(req.body.boxNumber);
+      if (!Number.isInteger(boxNumber) || boxNumber < 0) {
+        return res.status(400).json({ error: 'boxNumber must be an integer >= 0' });
+      }
+
+      const originalPrice = await resolveOriginalPrice({
+        carCategory,
+        washType,
+        fallbackPrice: req.body.price,
+      });
+      if (originalPrice === null) {
+        return res.status(400).json({
+          error:
+            'price is required unless a pricing matrix entry exists for the provided carType/serviceType',
+        });
+      }
+
+      const discountedPrice = computeDiscountedPrice(originalPrice, discountPercentage);
+      const washerCut = computeWasherCut(discountedPrice, washer.salaryPercentage);
+
+      const vehicleId = await resolveVehicleId({ licensePlate, carCategory });
+      const { companyId, companyName } = await resolveCompanySnapshot(req.body.companyId);
+      const discountId = await resolveDiscountId({ companyId, discountPercentage });
 
       const record = await prisma.washRecord.create({
         data: {
-          licenseNumber,
-          carType,
-          serviceType,
-          companyId: companyId || null,
-          discountPercent,
-          price,
-          boxNumber,
-          washerName,
+          vehicleId,
+          washerId: washer.id,
+          companyId,
+          discountId,
           createdById: req.user.id,
+
+          licensePlate,
+          companyName,
+          discountPercentage,
+          carCategory,
+          washType,
+          washerUsername: washer.username,
+          boxNumber,
+
+          originalPrice: toDecimalString(originalPrice),
+          discountedPrice: toDecimalString(discountedPrice),
+          washerCut: toDecimalString(washerCut),
+
+          paymentMethod: req.body.paymentMethod || null,
+          startTime: req.body.startTime ? new Date(req.body.startTime) : undefined,
+          endTime: req.body.endTime ? new Date(req.body.endTime) : undefined,
         },
         include: {
           company: true,
+          vehicle: true,
+          washer: true,
+          discount: true,
+          createdBy: { select: { id: true, email: true, name: true } },
         },
       });
 
-      res.status(201).json({ record });
+      res.status(201).json({ record: recordToLegacy(record), rawRecord: record });
     } catch (error) {
       console.error('Create record error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -288,7 +582,7 @@ router.post(
  *     tags:
  *       - Records
  *     summary: Update a wash record
- *     description: Update a wash record (admin only, requires master PIN)
+ *     description: Update a wash record (admin only, requires master PIN). Accepts legacy fields and maps them into the current schema.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -311,16 +605,41 @@ router.post(
  *                 type: string
  *               licenseNumber:
  *                 type: string
+ *               licensePlate:
+ *                 type: string
  *               carType:
  *                 type: string
  *               serviceType:
  *                 type: string
+ *               carCategory:
+ *                 type: string
+ *               washType:
+ *                 type: string
  *               price:
  *                 type: number
+ *               discountPercent:
+ *                 type: number
+ *               companyId:
+ *                 type: string
+ *               washerName:
+ *                 type: string
+ *               washerUsername:
+ *                 type: string
+ *               washerId:
+ *                 type: integer
  *               isFinished:
  *                 type: boolean
  *               isPaid:
  *                 type: boolean
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [cash, card]
+ *               startTime:
+ *                 type: string
+ *                 format: date-time
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
  *     responses:
  *       200:
  *         description: Record updated successfully
@@ -330,6 +649,8 @@ router.post(
  *               type: object
  *               properties:
  *                 record:
+ *                   type: object
+ *                 rawRecord:
  *                   type: object
  *       400:
  *         description: Validation error
@@ -361,22 +682,159 @@ router.put(
       }
 
       const { id } = req.params;
-      const updateData = { ...req.body };
-      delete updateData.masterPin; // Remove masterPin from update data
 
-      // Convert date strings to Date objects if present
-      if (updateData.startTime) updateData.startTime = new Date(updateData.startTime);
-      if (updateData.endTime) updateData.endTime = new Date(updateData.endTime);
+      const existing = await prisma.washRecord.findUnique({
+        where: { id },
+        include: { company: true, vehicle: true, washer: true },
+      });
+      if (!existing) return res.status(404).json({ error: 'Record not found' });
+
+      // Build schema-aligned update data from legacy-friendly input
+      const updateData = {};
+
+      // Status helpers (legacy)
+      if (typeof req.body.isFinished === 'boolean') {
+        updateData.endTime = req.body.isFinished ? new Date() : null;
+      }
+      if (typeof req.body.isPaid === 'boolean') {
+        if (req.body.isPaid === false) {
+          updateData.paymentMethod = null;
+        } else if (!req.body.paymentMethod && !existing.paymentMethod) {
+          updateData.paymentMethod = 'cash';
+        }
+      }
+
+      if (req.body.paymentMethod) updateData.paymentMethod = req.body.paymentMethod;
+      if (req.body.startTime) updateData.startTime = new Date(req.body.startTime);
+      if (req.body.endTime) updateData.endTime = new Date(req.body.endTime);
+
+      if (Object.prototype.hasOwnProperty.call(req.body, 'boxNumber')) {
+        const boxNumber =
+          req.body.boxNumber === undefined || req.body.boxNumber === null
+            ? 0
+            : Number(req.body.boxNumber);
+        if (!Number.isInteger(boxNumber) || boxNumber < 0) {
+          return res.status(400).json({ error: 'boxNumber must be an integer >= 0' });
+        }
+        updateData.boxNumber = boxNumber;
+      }
+
+      const nextCarCategory =
+        req.body.carCategory ||
+        (req.body.carType ? LEGACY_CAR_TYPE_TO_SCHEMA[req.body.carType] : undefined);
+      const nextWashType =
+        req.body.washType ||
+        (req.body.serviceType ? LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType] : undefined);
+
+      // License plate changes require (re)linking vehicle
+      const nextLicensePlate = req.body.licensePlate || req.body.licenseNumber;
+      if (nextLicensePlate) {
+        const plate = String(nextLicensePlate).trim();
+        const category = nextCarCategory || existing.carCategory;
+        updateData.licensePlate = plate;
+        updateData.vehicleId = await resolveVehicleId({ licensePlate: plate, carCategory: category });
+      }
+
+      if (nextCarCategory) {
+        updateData.carCategory = nextCarCategory;
+      }
+      if (nextWashType) {
+        updateData.washType = nextWashType;
+      }
+
+      // Washer changes require relinking washer + snapshot username
+      if (req.body.washerId || req.body.washerUsername || req.body.washerName) {
+        const washer = await resolveWasher({
+          washerId: req.body.washerId ? Number(req.body.washerId) : null,
+          washerUsername: req.body.washerUsername || req.body.washerName,
+        });
+        if (!washer) return res.status(400).json({ error: 'Invalid washerId/washerName' });
+        updateData.washerId = washer.id;
+        updateData.washerUsername = washer.username;
+      }
+
+      // Company/discount snapshot changes
+      if (Object.prototype.hasOwnProperty.call(req.body, 'companyId')) {
+        const { companyId, companyName } = await resolveCompanySnapshot(req.body.companyId);
+        updateData.companyId = companyId;
+        updateData.companyName = companyName;
+      }
+
+      // Discount/price recomputation
+      const nextDiscountPercentage = Object.prototype.hasOwnProperty.call(req.body, 'discountPercent')
+        ? Number(req.body.discountPercent) || 0
+        : undefined;
+      if (nextDiscountPercentage !== undefined) {
+        updateData.discountPercentage = nextDiscountPercentage;
+      }
+
+      const priceOverride = Object.prototype.hasOwnProperty.call(req.body, 'price')
+        ? Number(req.body.price)
+        : undefined;
+
+      const shouldReprice =
+        priceOverride !== undefined ||
+        nextCarCategory !== undefined ||
+        nextWashType !== undefined ||
+        nextDiscountPercentage !== undefined;
+
+      if (shouldReprice) {
+        const carCategory = nextCarCategory || existing.carCategory;
+        const washType = nextWashType || existing.washType;
+        const discountPercentage =
+          nextDiscountPercentage !== undefined ? nextDiscountPercentage : existing.discountPercentage;
+
+        const originalPrice = await resolveOriginalPrice({
+          carCategory,
+          washType,
+          fallbackPrice: priceOverride,
+        });
+        if (originalPrice === null) {
+          return res.status(400).json({
+            error:
+              'price is required unless a pricing matrix entry exists for the provided carType/serviceType',
+          });
+        }
+
+        const discountedPrice = computeDiscountedPrice(originalPrice, discountPercentage);
+
+        // If washer is being changed in the same request, use it; otherwise compute from existing washer
+        let washerSalaryPercentage = existing.washer?.salaryPercentage ?? 0;
+        if (updateData.washerId && updateData.washerId !== existing.washerId) {
+          const updatedWasher = await prisma.washer.findUnique({
+            where: { id: updateData.washerId },
+            select: { salaryPercentage: true },
+          });
+          washerSalaryPercentage = updatedWasher?.salaryPercentage ?? washerSalaryPercentage;
+        }
+
+        const washerCut = computeWasherCut(discountedPrice, washerSalaryPercentage);
+
+        updateData.originalPrice = toDecimalString(originalPrice);
+        updateData.discountedPrice = toDecimalString(discountedPrice);
+        updateData.washerCut = toDecimalString(washerCut);
+
+        const effectiveCompanyId =
+          updateData.companyId !== undefined ? updateData.companyId : existing.companyId;
+        const discountId = await resolveDiscountId({
+          companyId: effectiveCompanyId,
+          discountPercentage,
+        });
+        updateData.discountId = discountId;
+      }
 
       const record = await prisma.washRecord.update({
         where: { id },
         data: updateData,
         include: {
           company: true,
+          vehicle: true,
+          washer: true,
+          discount: true,
         },
       });
 
-      res.json({ record });
+      res.json({ record: recordToLegacy(record), rawRecord: record });
     } catch (error) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Record not found' });
