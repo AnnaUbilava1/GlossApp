@@ -37,39 +37,44 @@ async function main() {
 
   // Create sample washers
   const washers = ['Washer 1', 'Washer 2', 'Washer 3'];
-  for (const name of washers) {
+  for (const username of washers) {
     await prisma.washer.upsert({
-      where: { name },
+      where: { username },
       update: {},
-      create: { name },
+      create: { 
+        username,
+        name: username, // Optional name field
+        active: true,
+      },
     });
   }
   console.log('✅ Created washers');
 
   // Create default pricing matrix
-  const carTypes = ['sedan', 'suv', 'truck', 'motorcycle'];
-  const serviceTypes = ['basic', 'premium', 'deluxe'];
+  const carTypes = ['SEDAN', 'PREMIUM_CLASS', 'SMALL_JEEP', 'BIG_JEEP', 'MICROBUS'];
+  const washTypes = ['OUTER', 'INNER', 'COMPLETE', 'ENGINE', 'CHEMICAL'];
   const defaultPrices = {
-    sedan: { basic: 20, premium: 35, deluxe: 50 },
-    suv: { basic: 25, premium: 40, deluxe: 60 },
-    truck: { basic: 30, premium: 45, deluxe: 70 },
-    motorcycle: { basic: 15, premium: 25, deluxe: 35 },
+    SEDAN: { OUTER: 17, INNER: 17, COMPLETE: 30, ENGINE: 60, CHEMICAL: 400 },
+    PREMIUM_CLASS: { OUTER: 18, INNER: 18, COMPLETE: 32, ENGINE: 70, CHEMICAL: 450 },
+    SMALL_JEEP: { OUTER: 20, INNER: 20, COMPLETE: 35, ENGINE: 80, CHEMICAL: 500 },
+    BIG_JEEP: { OUTER: 25, INNER: 25, COMPLETE: 40, ENGINE: 90, CHEMICAL: 550 },
+    MICROBUS: { OUTER: 40, INNER: 40, COMPLETE: 65, ENGINE: 100, CHEMICAL: 600 },
   };
 
-  for (const carType of carTypes) {
-    for (const serviceType of serviceTypes) {
+  for (const carCategory of carTypes) {
+    for (const washType of washTypes) {
       await prisma.pricing.upsert({
         where: {
-          carType_serviceType: {
-            carType,
-            serviceType,
+          carCategory_washType: {
+            carCategory,
+            washType,
           },
         },
         update: {},
         create: {
-          carType,
-          serviceType,
-          price: defaultPrices[carType][serviceType],
+          carCategory,
+          washType,
+          price: defaultPrices[carCategory][washType],
         },
       });
     }
