@@ -1,7 +1,41 @@
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
-.DS_Store
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log.*
+
+# Build outputs
 dist/
 build/
+*.tgz
 
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Prisma (keep schema, ignore generated files if any)
+# Note: migrations should be committed, but generated client can be ignored if needed
+# prisma/migrations/ should be kept in git
