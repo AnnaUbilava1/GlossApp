@@ -2,46 +2,18 @@ import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import {
+  LEGACY_CAR_TYPE_TO_SCHEMA,
+  LEGACY_SERVICE_TYPE_TO_SCHEMA,
+  SCHEMA_CAR_TYPE_TO_LEGACY,
+  SCHEMA_WASH_TYPE_TO_LEGACY,
+} from '../utils/legacyMappings.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // All routes require authentication
 router.use(authenticateToken);
-
-// Legacy (frontend) ↔ Schema mappings
-const LEGACY_CAR_TYPE_TO_SCHEMA = {
-  Sedan: 'SEDAN',
-  Hatchback: 'SEDAN',
-  Premium: 'PREMIUM_CLASS',
-  Jeep: 'SMALL_JEEP',
-  'Big Jeep': 'BIG_JEEP',
-  Minivan: 'MICROBUS',
-  Truck: 'BIG_JEEP',
-};
-
-const LEGACY_SERVICE_TYPE_TO_SCHEMA = {
-  'Complete Wash': 'COMPLETE',
-  'Outer Wash': 'OUTER',
-  'Interior Cleaning': 'INNER',
-  'Engine Wash': 'ENGINE',
-};
-
-const SCHEMA_CAR_TYPE_TO_LEGACY = {
-  SEDAN: 'Sedan',
-  PREMIUM_CLASS: 'Premium',
-  SMALL_JEEP: 'Jeep',
-  BIG_JEEP: 'Big Jeep',
-  MICROBUS: 'Minivan',
-};
-
-const SCHEMA_WASH_TYPE_TO_LEGACY = {
-  COMPLETE: 'Complete Wash',
-  OUTER: 'Outer Wash',
-  INNER: 'Interior Cleaning',
-  ENGINE: 'Engine Wash',
-  CHEMICAL: 'Complete Wash',
-};
 
 function toDecimalString(value) {
   const num = typeof value === 'string' ? Number(value) : value;

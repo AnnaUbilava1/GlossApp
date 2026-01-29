@@ -1,11 +1,14 @@
-import express from 'express';
+import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/auth.js';
-import recordRoutes from './routes/records.js';
+import express from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import authRoutes from './routes/auth.js';
+import discountOptionsRoutes from './routes/discountOptions.js';
+import pricingRoutes from './routes/pricing.js';
+import recordRoutes from './routes/records.js';
+import washerRoutes from './routes/washers.js';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +83,9 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/records', recordRoutes);
+app.use('/api/washers', washerRoutes);
+app.use('/api/pricing', pricingRoutes);
+app.use('/api/discount-options', discountOptionsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

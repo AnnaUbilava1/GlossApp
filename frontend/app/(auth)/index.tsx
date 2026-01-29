@@ -1,33 +1,44 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    View,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
 } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../src/context/AuthContext";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = () => {
-    // TODO: Implement authentication logic
-    // For now, check if email contains 'admin' to determine role
-    const isAdmin = email.toLowerCase().includes('admin');
-    if (isAdmin) {
-      router.replace("/(admin)");
-    } else {
-      router.replace("/(app)");
+  const handleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const user = await auth.login(email, password);
+      const role = user.role || "staff";
+      if (role === "admin") {
+        router.replace("/(admin)");
+      } else {
+        router.replace("/(app)");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,14 +128,17 @@ export default function LoginScreen() {
                 style={styles.signInButton}
                 labelStyle={styles.signInButtonText}
                 contentStyle={styles.signInButtonContent}
+                loading={loading}
+                disabled={loading}
               >
                 Sign In
               </Button>
 
-              {/* Demo Instruction */}
-              <Text variant="bodySmall" style={styles.demoText}>
-                Demo: Use any email (include 'admin' for admin role)
-              </Text>
+              {!!error && (
+                <Text variant="bodySmall" style={[styles.demoText, { color: "#D32F2F" }]}>
+                  {error}
+                </Text>
+              )}
             </View>
           </View>
         </ScrollView>

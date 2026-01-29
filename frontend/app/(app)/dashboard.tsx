@@ -1,58 +1,62 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    View
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  View
 } from "react-native";
 import { Button, DataTable, IconButton, Text, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../src/components/AppHeader";
 import TabNavigation from "../../src/components/TabNavigation";
+import { useAuth } from "../../src/context/AuthContext";
+import { apiFetch } from "../../src/utils/api";
 import { getStatusColor, getStatusLabel } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock data for now - will be replaced with Firebase data later
-const mockRecords = [
-  {
-    id: "1",
-    licenseNumber: "IT-700-TI",
-    carType: "Premium",
-    companyDiscount: "company1 30%",
-    service: "Interior Cleaning",
-    price: 178.2,
-    boxNumber: 3,
-    washer: "Sarah Williams",
-    startTime: "N/A",
-    endTime: "N/A",
-    isFinished: false,
-    isPaid: false,
-  },
-  {
-    id: "2",
-    licenseNumber: "ABC-123",
-    carType: "Sedan",
-    companyDiscount: "physical person 30%",
-    service: "Complete Wash",
-    price: 70.0,
-    boxNumber: 1,
-    washer: "Mike Johnson",
-    startTime: "11/25/2025, 9:00:00 AM",
-    endTime: "11/25/2025, 10:00:00 AM",
-    isFinished: true,
-    isPaid: true,
-  },
-];
+type RecordRow = {
+  id: string;
+  licenseNumber: string;
+  carType: string;
+  companyDiscount?: string;
+  serviceType: string;
+  price: number;
+  boxNumber: number;
+  washerName: string;
+  startTime: string | Date;
+  endTime?: string | Date | null;
+  isFinished: boolean;
+  isPaid: boolean;
+};
 
 export default function DashboardScreen() {
   const theme = useTheme();
+  const auth = useAuth();
   const [activeTab, setActiveTab] = useState("all-records");
-  const [records] = useState(mockRecords);
+  const [records, setRecords] = useState<RecordRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!auth.token) {
+      router.replace("/(auth)");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    apiFetch<{ records: RecordRow[] }>("/api/records", { token: auth.token })
+      .then((data) => {
+        setRecords(data.records || []);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load records"))
+      .finally(() => setLoading(false));
+  }, [auth.token]);
 
   const handleTabChange = (key: string) => {
+    setActiveTab(key);
     if (key === "new-record") {
       router.push("/(app)/new-record");
     }
@@ -78,7 +82,7 @@ export default function DashboardScreen() {
     console.log("Delete record", recordId);
   };
 
-  const renderRecordRow = (record: typeof mockRecords[0]) => {
+  const renderRecordRow = (record: RecordRow) => {
     const bgColor = getStatusColor(record.isFinished, record.isPaid);
     const statusLabel = getStatusLabel(record.isFinished, record.isPaid);
 
@@ -92,14 +96,14 @@ export default function DashboardScreen() {
         <DataTable.Cell style={styles.cell} textStyle={styles.cellText}>
           {record.companyDiscount}
         </DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.service}</DataTable.Cell>
+        <DataTable.Cell style={styles.cell}>{record.serviceType}</DataTable.Cell>
         <DataTable.Cell style={styles.cell}>
           <Text style={styles.priceText}>${record.price.toFixed(2)}</Text>
         </DataTable.Cell>
         <DataTable.Cell style={styles.cell}>{record.boxNumber}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.washer}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.startTime}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.endTime}</DataTable.Cell>
+        <DataTable.Cell style={styles.cell}>{record.washerName}</DataTable.Cell>
+        <DataTable.Cell style={styles.cell}>{String(record.startTime)}</DataTable.Cell>
+        <DataTable.Cell style={styles.cell}>{record.endTime ? String(record.endTime) : "—"}</DataTable.Cell>
         <DataTable.Cell style={styles.actionsCell}>
           <View style={styles.actionsContainer}>
             {!record.isFinished && (
@@ -144,7 +148,14 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AppHeader user={{ name: "John Doe", role: "staff" }} />
+      <AppHeader
+        user={auth.user || undefined}
+        showAdminButton={auth.user?.role === "admin"}
+        onLogout={() => {
+          auth.logout();
+          router.replace("/(auth)");
+        }}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -156,6 +167,12 @@ export default function DashboardScreen() {
             activeTab={activeTab}
             onTabChange={handleTabChange}
           />
+
+          {!!error && (
+            <Text variant="bodySmall" style={{ color: "#D32F2F", marginBottom: 8 }}>
+              {error}
+            </Text>
+          )}
 
           {isTablet ? (
             <DataTable style={styles.table}>
@@ -193,12 +210,12 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                     <View style={styles.mobileCardBody}>
-                      <Text variant="bodyMedium">{record.carType} • {record.service}</Text>
+                      <Text variant="bodyMedium">{record.carType} • {record.serviceType}</Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
-                        Box {record.boxNumber} • {record.washer}
+                        Box {record.boxNumber} • {record.washerName}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileTime}>
-                        Start: {record.startTime} | End: {record.endTime}
+                        Start: {String(record.startTime)} | End: {record.endTime ? String(record.endTime) : "—"}
                       </Text>
                     </View>
                     <View style={styles.mobileActions}>
