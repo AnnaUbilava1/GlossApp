@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   ScrollView,
@@ -11,37 +11,77 @@ import {
   DataTable,
   IconButton,
   Text,
+  TextInput,
   useTheme,
+  Snackbar,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
+import VehicleFormModal from "../../src/components/VehicleFormModal";
+import MasterPinModal from "../../src/components/MasterPinModal";
+import { useAuth } from "../../src/context/AuthContext";
+import {
+  getAllVehicles,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+  type Vehicle,
+  type CreateVehiclePayload,
+  type UpdateVehiclePayload,
+} from "../../src/services/vehicleService";
+import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock data
-const mockVehicles = [
-  {
-    id: "1",
-    licenseNumber: "ABC-123",
-    carType: "Sedan",
-    owner: "John Smith",
-    color: "Black",
-  },
-  {
-    id: "2",
-    licenseNumber: "XYZ-789",
-    carType: "Jeep",
-    owner: "Jane Doe",
-    color: "White",
-  },
-];
-
 export default function VehiclesScreen() {
   const theme = useTheme();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState("vehicles");
-  const [vehicles] = useState(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [masterPinForAction, setMasterPinForAction] = useState<string | null>(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Fetch vehicles on mount and when search/page changes
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchVehicles = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllVehicles(token, searchQuery || undefined, page, 50);
+        setVehicles(response.vehicles);
+        setTotalPages(response.pagination.totalPages);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load vehicles");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, [token, searchQuery, page]);
+
+  const refreshVehicles = async () => {
+    if (!token) return;
+    try {
+      const response = await getAllVehicles(token, searchQuery || undefined, page, 50);
+      setVehicles(response.vehicles);
+      setTotalPages(response.pagination.totalPages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to refresh vehicles");
+    }
+  };
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
@@ -59,24 +99,78 @@ export default function VehiclesScreen() {
     }
   };
 
-  const handleAddVehicle = () => {
-    // TODO: Implement add vehicle modal
-    console.log("Add vehicle");
+  const handleAddVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
+    if (!token) {
+      setError("Not authenticated");
+      return;
+    }
+
+    try {
+      const createPayload: CreateVehiclePayload = {
+        licensePlate: (payload as CreateVehiclePayload).licensePlate || (payload as UpdateVehiclePayload).licensePlate || "",
+        carType: (payload as CreateVehiclePayload).carType || (payload as UpdateVehiclePayload).carType || "Sedan",
+      };
+      await createVehicle(token, createPayload);
+      setSuccessMessage("Vehicle added successfully");
+      await refreshVehicles();
+    } catch (err) {
+      throw err; // Re-throw to let modal handle it
+    }
   };
 
-  const handleEdit = (id: string) => {
-    // TODO: Implement edit vehicle
-    console.log("Edit vehicle", id);
+  const handleEditVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
+    if (!token || !editingVehicle) {
+      setError("Not authenticated");
+      return;
+    }
+
+    try {
+      const updatePayload: UpdateVehiclePayload = {
+        licensePlate: (payload as CreateVehiclePayload).licensePlate || (payload as UpdateVehiclePayload).licensePlate,
+        carType: (payload as CreateVehiclePayload).carType || (payload as UpdateVehiclePayload).carType,
+      };
+      await updateVehicle(token, editingVehicle.id, updatePayload);
+      setSuccessMessage("Vehicle updated successfully");
+      setEditingVehicle(null);
+      await refreshVehicles();
+    } catch (err) {
+      throw err; // Re-throw to let modal handle it
+    }
   };
 
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete vehicle with PIN check
-    console.log("Delete vehicle", id);
+  const handleDeleteClick = (vehicleId: string) => {
+    setVehicleToDelete(vehicleId);
+    setMasterPinForAction("");
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!token || !vehicleToDelete || !masterPinForAction) {
+      return;
+    }
+
+    if (masterPinForAction.trim() !== MASTER_PIN) {
+      setError("Incorrect PIN");
+      setMasterPinForAction(null);
+      setVehicleToDelete(null);
+      return;
+    }
+
+    try {
+      await deleteVehicle(token, vehicleToDelete, masterPinForAction.trim());
+      setSuccessMessage("Vehicle deleted successfully");
+      setMasterPinForAction(null);
+      setVehicleToDelete(null);
+      await refreshVehicles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete vehicle");
+      setMasterPinForAction(null);
+      setVehicleToDelete(null);
+    }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AdminHeader user={{ name: "John Doe" }} />
+      <AdminHeader user={user ? { name: user.name || user.email } : { name: "Admin" }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -100,7 +194,10 @@ export default function VehiclesScreen() {
             <Button
               mode="contained"
               icon="plus"
-              onPress={handleAddVehicle}
+              onPress={() => {
+                setEditingVehicle(null);
+                setShowAddModal(true);
+              }}
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
@@ -108,35 +205,58 @@ export default function VehiclesScreen() {
             </Button>
           </View>
 
-          {isTablet ? (
+          <TextInput
+            mode="outlined"
+            label="Search by License Plate"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+            left={<TextInput.Icon icon="magnify" />}
+            right={
+              searchQuery ? (
+                <TextInput.Icon icon="close" onPress={() => setSearchQuery("")} />
+              ) : undefined
+            }
+          />
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="bodyLarge">Loading vehicles...</Text>
+            </View>
+          ) : vehicles.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text variant="bodyLarge" style={styles.emptyText}>
+                {searchQuery ? "No vehicles found" : "No vehicles found"}
+              </Text>
+            </View>
+          ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>License Number</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>License Plate</DataTable.Title>
                 <DataTable.Title style={styles.headerCell}>Car Type</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Owner</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Color</DataTable.Title>
                 <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
               </DataTable.Header>
 
               {vehicles.map((vehicle) => (
                 <DataTable.Row key={vehicle.id} style={styles.tableRow}>
-                  <DataTable.Cell style={styles.cell}>{vehicle.licenseNumber}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{vehicle.carType}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{vehicle.owner}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{vehicle.color}</DataTable.Cell>
+                  <DataTable.Cell style={styles.cell}>{vehicle.licensePlate}</DataTable.Cell>
+                  <DataTable.Cell style={styles.cell}>{vehicle.carCategory}</DataTable.Cell>
                   <DataTable.Cell style={styles.actionsCell}>
                     <View style={styles.actionsContainer}>
                       <IconButton
                         icon="pencil"
                         size={20}
                         iconColor="#2F80ED"
-                        onPress={() => handleEdit(vehicle.id)}
+                        onPress={() => {
+                          setEditingVehicle(vehicle);
+                          setShowAddModal(true);
+                        }}
                       />
                       <IconButton
                         icon="delete"
                         size={20}
                         iconColor="#D32F2F"
-                        onPress={() => handleDelete(vehicle.id)}
+                        onPress={() => handleDeleteClick(vehicle.id)}
                       />
                     </View>
                   </DataTable.Cell>
@@ -148,35 +268,98 @@ export default function VehiclesScreen() {
               {vehicles.map((vehicle) => (
                 <View key={vehicle.id} style={styles.mobileCard}>
                   <View style={styles.mobileCardHeader}>
-                    <Text variant="titleMedium">{vehicle.licenseNumber}</Text>
+                    <Text variant="titleMedium">{vehicle.licensePlate}</Text>
                     <Text variant="bodyMedium" style={styles.carTypeText}>
-                      {vehicle.carType}
+                      {vehicle.carCategory}
                     </Text>
                   </View>
-                  <Text variant="bodyMedium">{vehicle.owner}</Text>
-                  <Text variant="bodySmall" style={styles.mobileDetails}>
-                    Color: {vehicle.color}
-                  </Text>
                   <View style={styles.mobileActions}>
                     <IconButton
                       icon="pencil"
                       size={20}
                       iconColor="#2F80ED"
-                      onPress={() => handleEdit(vehicle.id)}
+                      onPress={() => {
+                        setEditingVehicle(vehicle);
+                        setShowAddModal(true);
+                      }}
                     />
                     <IconButton
                       icon="delete"
                       size={20}
                       iconColor="#D32F2F"
-                      onPress={() => handleDelete(vehicle.id)}
+                      onPress={() => handleDeleteClick(vehicle.id)}
                     />
                   </View>
                 </View>
               ))}
             </View>
           )}
+
+          {totalPages > 1 && (
+            <View style={styles.paginationContainer}>
+              <Button
+                disabled={page === 1}
+                onPress={() => setPage((p) => Math.max(1, p - 1))}
+                mode="outlined"
+              >
+                Previous
+              </Button>
+              <Text variant="bodyMedium" style={styles.paginationText}>
+                Page {page} of {totalPages}
+              </Text>
+              <Button
+                disabled={page >= totalPages}
+                onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
+                mode="outlined"
+              >
+                Next
+              </Button>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      <VehicleFormModal
+        visible={showAddModal}
+        onDismiss={() => {
+          setShowAddModal(false);
+          setEditingVehicle(null);
+        }}
+        onSave={editingVehicle ? handleEditVehicle : handleAddVehicle}
+        editingVehicle={editingVehicle}
+      />
+
+      <MasterPinModal
+        visible={vehicleToDelete !== null}
+        onDismiss={() => {
+          setVehicleToDelete(null);
+          setMasterPinForAction(null);
+        }}
+        onCorrectPin={(pin) => {
+          setMasterPinForAction(pin);
+          handleDeleteConfirm();
+        }}
+        title="Delete Vehicle"
+        description="Enter Master PIN to confirm deletion. Vehicles with wash records cannot be deleted."
+      />
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(null)}
+        duration={4000}
+        style={styles.snackbar}
+      >
+        {error}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
+      >
+        {successMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -219,6 +402,23 @@ const styles = StyleSheet.create({
   addButtonLabel: {
     color: "#FFFFFF",
   },
+  searchInput: {
+    marginBottom: 16,
+    backgroundColor: "#FAFAFA",
+  },
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: "#757575",
+  },
   table: {
     backgroundColor: "transparent",
   },
@@ -240,6 +440,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    gap: 16,
+  },
+  paginationText: {
+    color: "#757575",
+  },
   mobileContainer: {
     gap: 12,
   },
@@ -258,14 +468,13 @@ const styles = StyleSheet.create({
   carTypeText: {
     color: "#757575",
   },
-  mobileDetails: {
-    color: "#757575",
-    marginTop: 4,
-  },
   mobileActions: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 12,
+  },
+  snackbar: {
+    marginBottom: 16,
   },
 });
 

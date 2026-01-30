@@ -36,6 +36,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
+exp-env.d.ts
+
+
 # Prisma (keep schema, ignore generated files if any)
 # Note: migrations should be committed, but generated client can be ignored if needed
 # prisma/migrations/ should be kept in git

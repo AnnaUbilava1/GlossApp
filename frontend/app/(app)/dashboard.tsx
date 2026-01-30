@@ -1,59 +1,50 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Dimensions,
   ScrollView,
   StyleSheet,
   View
 } from "react-native";
-import { Button, DataTable, IconButton, Text, useTheme } from "react-native-paper";
+import { Button, DataTable, IconButton, Text, TextInput, useTheme, Snackbar } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../src/components/AppHeader";
+import DashboardSummary from "../../src/components/DashboardSummary";
+import RecordItem from "../../src/components/RecordItem";
 import TabNavigation from "../../src/components/TabNavigation";
+import MasterPinModal from "../../src/components/MasterPinModal";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
-import { getStatusColor, getStatusLabel } from "../../src/utils/constants";
+import { useDashboard } from "../../src/hooks/useDashboard";
+import { getStatusColor } from "../../src/utils/constants";
+import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-type RecordRow = {
-  id: string;
-  licenseNumber: string;
-  carType: string;
-  companyDiscount?: string;
-  serviceType: string;
-  price: number;
-  boxNumber: number;
-  washerName: string;
-  startTime: string | Date;
-  endTime?: string | Date | null;
-  isFinished: boolean;
-  isPaid: boolean;
-};
-
 export default function DashboardScreen() {
   const theme = useTheme();
   const auth = useAuth();
-  const [activeTab, setActiveTab] = useState("all-records");
-  const [records, setRecords] = useState<RecordRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState("all-records");
+  const {
+    records,
+    loading,
+    error,
+    startDate,
+    endDate,
+    setStartDate,
+    setEndDate,
+    summary,
+    refresh,
+  } = useDashboard(auth.token);
 
-  useEffect(() => {
-    if (!auth.token) {
-      router.replace("/(auth)");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    apiFetch<{ records: RecordRow[] }>("/api/records", { token: auth.token })
-      .then((data) => {
-        setRecords(data.records || []);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load records"))
-      .finally(() => setLoading(false));
-  }, [auth.token]);
+  // Refetch records when screen gains focus (e.g. after adding a record)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const handleTabChange = (key: string) => {
     setActiveTab(key);
@@ -62,89 +53,117 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleFinish = (recordId: string) => {
-    // TODO: Implement finish logic
-    console.log("Finish record", recordId);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [masterPinForAction, setMasterPinForAction] = useState<string | null>(null);
+  const [recordToEdit, setRecordToEdit] = useState<string | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const handleFinish = async (recordId: string) => {
+    if (!auth.token) return;
+    setActionError(null);
+    try {
+      await apiFetch(`/api/records/${recordId}/finish`, {
+        token: auth.token,
+        method: "POST",
+      });
+      // Refresh by nudging date state (triggering useDashboard effect)
+      setStartDate((d) => d);
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Failed to finish record. Please try again.";
+      setActionError(msg);
+    }
   };
 
-  const handlePayment = (recordId: string) => {
-    // TODO: Implement payment logic
-    console.log("Payment for record", recordId);
+  const handlePayment = async (recordId: string) => {
+    if (!auth.token) return;
+    setActionError(null);
+    try {
+      await apiFetch(`/api/records/${recordId}/pay`, {
+        token: auth.token,
+        method: "POST",
+        body: JSON.stringify({ paymentMethod: "cash" }), // default to cash; can be extended with modal
+      });
+      setStartDate((d) => d);
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Failed to mark record as paid. Please try again.";
+      setActionError(msg);
+    }
   };
 
-  const handleEdit = (recordId: string) => {
-    // TODO: Implement edit logic with PIN check
-    console.log("Edit record", recordId);
+  const handleEditClick = (recordId: string) => {
+    setRecordToEdit(recordId);
+    setMasterPinForAction("");
   };
 
-  const handleDelete = (recordId: string) => {
-    // TODO: Implement delete logic with PIN check
-    console.log("Delete record", recordId);
+  const handleDeleteClick = (recordId: string) => {
+    setRecordToDelete(recordId);
+    setMasterPinForAction("");
   };
 
-  const renderRecordRow = (record: RecordRow) => {
-    const bgColor = getStatusColor(record.isFinished, record.isPaid);
-    const statusLabel = getStatusLabel(record.isFinished, record.isPaid);
+  const handleEditConfirm = async () => {
+    if (!auth.token || !recordToEdit || !masterPinForAction) {
+      return;
+    }
 
-    return (
-      <DataTable.Row
-        key={record.id}
-        style={[styles.tableRow, { backgroundColor: bgColor }]}
-      >
-        <DataTable.Cell style={styles.cell}>{record.licenseNumber}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.carType}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell} textStyle={styles.cellText}>
-          {record.companyDiscount}
-        </DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.serviceType}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>
-          <Text style={styles.priceText}>${record.price.toFixed(2)}</Text>
-        </DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.boxNumber}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.washerName}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{String(record.startTime)}</DataTable.Cell>
-        <DataTable.Cell style={styles.cell}>{record.endTime ? String(record.endTime) : "—"}</DataTable.Cell>
-        <DataTable.Cell style={styles.actionsCell}>
-          <View style={styles.actionsContainer}>
-            {!record.isFinished && (
-              <Button
-                mode="contained"
-                compact
-                onPress={() => handleFinish(record.id)}
-                style={styles.finishButton}
-                labelStyle={styles.finishButtonLabel}
-              >
-                Finish
-              </Button>
-            )}
-            {record.isFinished && !record.isPaid && (
-              <Button
-                mode="contained"
-                compact
-                onPress={() => handlePayment(record.id)}
-                style={styles.paymentButton}
-                labelStyle={styles.paymentButtonLabel}
-              >
-                Pay
-              </Button>
-            )}
-            <IconButton
-              icon="pencil"
-              size={20}
-              iconColor="#2F80ED"
-              onPress={() => handleEdit(record.id)}
-            />
-            <IconButton
-              icon="delete"
-              size={20}
-              iconColor="#D32F2F"
-              onPress={() => handleDelete(record.id)}
-            />
-          </View>
-        </DataTable.Cell>
-      </DataTable.Row>
-    );
+    if (masterPinForAction.trim() !== MASTER_PIN) {
+      setActionError("Incorrect PIN");
+      setMasterPinForAction(null);
+      setRecordToEdit(null);
+      return;
+    }
+
+    // TODO: Navigate to edit screen or open edit modal
+    // For now, just show success message
+    setActionSuccess("Edit functionality coming soon");
+    setMasterPinForAction(null);
+    setRecordToEdit(null);
   };
+
+  const handleDeleteConfirm = async () => {
+    if (!auth.token || !recordToDelete || !masterPinForAction) {
+      return;
+    }
+
+    if (masterPinForAction.trim() !== MASTER_PIN) {
+      setActionError("Incorrect PIN");
+      setMasterPinForAction(null);
+      setRecordToDelete(null);
+      return;
+    }
+
+    setActionError(null);
+    try {
+      await apiFetch(`/api/records/${recordToDelete}`, {
+        token: auth.token,
+        method: "DELETE",
+        body: JSON.stringify({ masterPin: masterPinForAction.trim() }),
+      });
+      setActionSuccess("Record deleted successfully");
+      setMasterPinForAction(null);
+      setRecordToDelete(null);
+      // Refresh by nudging date state
+      setStartDate((d) => d);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to delete record. Please try again.";
+      setActionError(msg);
+      setMasterPinForAction(null);
+      setRecordToDelete(null);
+    }
+  };
+
+  const renderRecordRow = (record: any) => (
+    <RecordItem
+      key={record.id}
+      record={record}
+      onFinish={() => handleFinish(record.id)}
+      onPayment={() => handlePayment(record.id)}
+      onEdit={() => handleEditClick(record.id)}
+      onDelete={() => handleDeleteClick(record.id)}
+    />
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
@@ -173,6 +192,37 @@ export default function DashboardScreen() {
               {error}
             </Text>
           )}
+          {!!actionError && (
+            <Text variant="bodySmall" style={{ color: "#D32F2F", marginBottom: 8 }}>
+              {actionError}
+            </Text>
+          )}
+
+          {/* Date range filter */}
+          <View style={styles.dateFilterRow}>
+            <View style={styles.dateField}>
+              <Text variant="labelSmall" style={styles.dateLabel}>
+                Start Date (YYYY-MM-DD)
+              </Text>
+              <TextInput
+                mode="outlined"
+                value={startDate}
+                onChangeText={setStartDate}
+                style={styles.dateInput}
+              />
+            </View>
+            <View style={styles.dateField}>
+              <Text variant="labelSmall" style={styles.dateLabel}>
+                End Date (YYYY-MM-DD)
+              </Text>
+              <TextInput
+                mode="outlined"
+                value={endDate}
+                onChangeText={setEndDate}
+                style={styles.dateInput}
+              />
+            </View>
+          </View>
 
           {isTablet ? (
             <DataTable style={styles.table}>
@@ -228,27 +278,42 @@ export default function DashboardScreen() {
                           Finish
                         </Button>
                       )}
-                      {record.isFinished && !record.isPaid && (
-                        <Button
-                          mode="contained"
-                          compact
-                          onPress={() => handlePayment(record.id)}
-                        >
-                          Pay
-                        </Button>
+                      {record.isFinished && (
+                        record.isPaid ? (
+                          <Button mode="contained" compact style={styles.paymentButtonPaid} disabled>
+                            Paid
+                          </Button>
+                        ) : auth.user?.role === "admin" ? (
+                          <Button
+                            mode="contained"
+                            compact
+                            onPress={() => handlePayment(record.id)}
+                            style={styles.paymentButtonUnpaid}
+                          >
+                            Unpaid
+                          </Button>
+                        ) : (
+                          <Button mode="contained" compact style={styles.paymentButtonUnpaid} disabled>
+                            Unpaid
+                          </Button>
+                        )
                       )}
-                      <IconButton
-                        icon="pencil"
-                        size={20}
-                        iconColor="#2F80ED"
-                        onPress={() => handleEdit(record.id)}
-                      />
-                      <IconButton
-                        icon="delete"
-                        size={20}
-                        iconColor="#D32F2F"
-                        onPress={() => handleDelete(record.id)}
-                      />
+                      {auth.user?.role === "admin" && (
+                        <>
+                          <IconButton
+                            icon="pencil"
+                            size={20}
+                            iconColor="#2F80ED"
+                            onPress={() => handleEditClick(record.id)}
+                          />
+                          <IconButton
+                            icon="delete"
+                            size={20}
+                            iconColor="#D32F2F"
+                            onPress={() => handleDeleteClick(record.id)}
+                          />
+                        </>
+                      )}
                     </View>
                   </View>
                 );
@@ -257,13 +322,60 @@ export default function DashboardScreen() {
           )}
 
           {/* Footer Summary */}
-          <View style={styles.footer}>
-            <Text variant="bodyMedium" style={styles.footerText}>
-              Total Cash: $0.00 | Total Card: $0.00 | Total Revenue: ${records.reduce((sum, r) => sum + (r.isPaid ? r.price : 0), 0).toFixed(2)}
-            </Text>
-          </View>
+          <DashboardSummary
+            records={records}
+            cash={summary.cash}
+            card={summary.card}
+            total={summary.total}
+          />
         </View>
       </ScrollView>
+
+      <MasterPinModal
+        visible={recordToEdit !== null}
+        onDismiss={() => {
+          setRecordToEdit(null);
+          setMasterPinForAction(null);
+        }}
+        onCorrectPin={(pin) => {
+          setMasterPinForAction(pin);
+          handleEditConfirm();
+        }}
+        title="Edit Record"
+        description="Enter Master PIN to edit this record"
+      />
+
+      <MasterPinModal
+        visible={recordToDelete !== null}
+        onDismiss={() => {
+          setRecordToDelete(null);
+          setMasterPinForAction(null);
+        }}
+        onCorrectPin={(pin) => {
+          setMasterPinForAction(pin);
+          handleDeleteConfirm();
+        }}
+        title="Delete Record"
+        description="Enter Master PIN to confirm deletion"
+      />
+
+      <Snackbar
+        visible={!!actionError}
+        onDismiss={() => setActionError(null)}
+        duration={4000}
+        style={styles.snackbar}
+      >
+        {actionError}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!actionSuccess}
+        onDismiss={() => setActionSuccess(null)}
+        duration={3000}
+        style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
+      >
+        {actionSuccess}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -289,6 +401,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  dateFilterRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  dateField: {
+    flex: 1,
+  },
+  dateLabel: {
+    marginBottom: 4,
+    color: "#757575",
+  },
+  dateInput: {
+    backgroundColor: "#FAFAFA",
   },
   table: {
     backgroundColor: "transparent",
@@ -324,11 +451,17 @@ const styles = StyleSheet.create({
   finishButtonLabel: {
     fontSize: 12,
   },
-  paymentButton: {
-    backgroundColor: "#4CAF50",
+  paymentButtonUnpaid: {
+    backgroundColor: "#D32F2F",
+  },
+  paymentButtonPaid: {
+    backgroundColor: "#2E7D32",
   },
   paymentButtonLabel: {
     fontSize: 12,
+  },
+  snackbar: {
+    marginBottom: 16,
   },
   mobileContainer: {
     gap: 12,

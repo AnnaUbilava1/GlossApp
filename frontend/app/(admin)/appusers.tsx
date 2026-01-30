@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Dimensions,
     ScrollView,
@@ -7,46 +7,77 @@ import {
     View,
 } from "react-native";
 import {
-    Button,
-    Chip,
-    DataTable,
-    IconButton,
-    Text,
-    useTheme,
+  Button,
+  Chip,
+  DataTable,
+  Dialog,
+  IconButton,
+  Portal,
+  Text,
+  TextInput,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
+import MasterPinModal from "../../src/components/MasterPinModal";
+import UserFormModal from "../../src/components/UserFormModal";
+import { useAuth } from "../../src/context/AuthContext";
+import type { User } from "../../src/utils/types";
+import {
+  createUser,
+  deleteUser,
+  getAllUsers,
+  resetUserPassword,
+} from "../../src/services/userService";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock data
-const mockUsers = [
-  {
-    id: "1",
-    email: "admin@carwash.com",
-    role: "admin",
-    name: "John Doe",
-  },
-  {
-    id: "2",
-    email: "staff1@carwash.com",
-    role: "staff",
-    name: "Mike Johnson",
-  },
-  {
-    id: "3",
-    email: "staff2@carwash.com",
-    role: "staff",
-    name: "Sarah Williams",
-  },
-];
-
 export default function AppUsersScreen() {
   const theme = useTheme();
+  const auth = useAuth();
   const [activeTab, setActiveTab] = useState("appusers");
-  const [users] = useState(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [formVisible, setFormVisible] = useState(false);
+  const [pinVisible, setPinVisible] = useState(false);
+  const [pinAction, setPinAction] = useState<"reset" | "delete" | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [masterPinForAction, setMasterPinForAction] = useState<string | null>(
+    null
+  );
+
+  const [passwordDialogVisible, setPasswordDialogVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    if (!auth.token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getAllUsers(auth.token);
+      setUsers(data);
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Failed to load users. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (auth.token) {
+      loadUsers();
+    } else {
+      setUsers([]);
+    }
+  }, [auth.token]);
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
@@ -65,18 +96,19 @@ export default function AppUsersScreen() {
   };
 
   const handleAddUser = () => {
-    // TODO: Implement add user modal
-    console.log("Add user");
+    setFormVisible(true);
   };
 
   const handleResetPassword = (id: string) => {
-    // TODO: Implement reset password
-    console.log("Reset password for user", id);
+    setSelectedUserId(id);
+    setPinAction("reset");
+    setPinVisible(true);
   };
 
   const handleDelete = (id: string) => {
-    // TODO: Implement delete user with PIN check
-    console.log("Delete user", id);
+    setSelectedUserId(id);
+    setPinAction("delete");
+    setPinVisible(true);
   };
 
   return (
@@ -113,7 +145,13 @@ export default function AppUsersScreen() {
             </Button>
           </View>
 
-          {isTablet ? (
+          {error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : null}
+
+          {loading ? (
+            <Text>Loading users...</Text>
+          ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
                 <DataTable.Title style={styles.headerCell}>Name</DataTable.Title>
@@ -197,6 +235,158 @@ export default function AppUsersScreen() {
               ))}
             </View>
           )}
+          <UserFormModal
+            visible={formVisible}
+            onDismiss={() => setFormVisible(false)}
+            editingUser={null}
+            onSave={async (values) => {
+              if (!auth.token) return;
+              setActionError(null);
+              setActionLoading(true);
+              try {
+                await createUser(auth.token, {
+                  email: values.email.trim(),
+                  password: values.password.trim(),
+                  role: values.role,
+                  name: values.name.trim() || undefined,
+                });
+                await loadUsers();
+                setFormVisible(false);
+              } catch (e) {
+                const msg =
+                  e instanceof Error
+                    ? e.message
+                    : "Failed to create user. Please try again.";
+                setActionError(msg);
+              } finally {
+                setActionLoading(false);
+              }
+            }}
+          />
+          <MasterPinModal
+            visible={pinVisible}
+            onDismiss={() => {
+              setPinVisible(false);
+              setPinAction(null);
+              setSelectedUserId(null);
+              setMasterPinForAction(null);
+              setActionError(null);
+            }}
+            onCorrectPin={(pin) => {
+              setMasterPinForAction(pin);
+              setPinVisible(false);
+              if (!selectedUserId || !auth.token || !pinAction) return;
+              if (pinAction === "reset") {
+                setPasswordDialogVisible(true);
+              } else if (pinAction === "delete") {
+                (async () => {
+                  setActionLoading(true);
+                  setActionError(null);
+                  try {
+                    await deleteUser(auth.token!, selectedUserId, pin);
+                    await loadUsers();
+                    setSelectedUserId(null);
+                    setPinAction(null);
+                    setMasterPinForAction(null);
+                  } catch (e) {
+                    const msg =
+                      e instanceof Error
+                        ? e.message
+                        : "Failed to delete user. Please try again.";
+                    setActionError(msg);
+                  } finally {
+                    setActionLoading(false);
+                  }
+                })();
+              }
+            }}
+          />
+          <Portal>
+            <Dialog
+              visible={passwordDialogVisible}
+              onDismiss={() => {
+                if (!actionLoading) {
+                  setPasswordDialogVisible(false);
+                  setNewPassword("");
+                  setActionError(null);
+                }
+              }}
+            >
+              <Dialog.Title>Reset Password</Dialog.Title>
+              <Dialog.Content>
+                <TextInput
+                  label="New Password"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (actionError) setActionError(null);
+                  }}
+                  secureTextEntry
+                  style={styles.passwordInput}
+                />
+                {actionError ? (
+                  <Text style={styles.errorText}>{actionError}</Text>
+                ) : null}
+              </Dialog.Content>
+              <Dialog.Actions>
+                <Button
+                  onPress={() => {
+                    if (!actionLoading) {
+                      setPasswordDialogVisible(false);
+                      setNewPassword("");
+                      setActionError(null);
+                    }
+                  }}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={async () => {
+                    if (!auth.token || !selectedUserId || !masterPinForAction) {
+                      return;
+                    }
+                    const trimmed = newPassword.trim();
+                    if (!trimmed || trimmed.length < 6) {
+                      setActionError(
+                        "Password must be at least 6 characters."
+                      );
+                      return;
+                    }
+                    setActionLoading(true);
+                    setActionError(null);
+                    try {
+                      await resetUserPassword(
+                        auth.token,
+                        selectedUserId,
+                        trimmed,
+                        masterPinForAction
+                      );
+                      await loadUsers();
+                      setPasswordDialogVisible(false);
+                      setNewPassword("");
+                      setSelectedUserId(null);
+                      setMasterPinForAction(null);
+                      setPinAction(null);
+                    } catch (e) {
+                      const msg =
+                        e instanceof Error
+                          ? e.message
+                          : "Failed to reset password. Please try again.";
+                      setActionError(msg);
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  loading={actionLoading}
+                  disabled={actionLoading}
+                >
+                  Save
+                </Button>
+              </Dialog.Actions>
+            </Dialog>
+          </Portal>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -297,6 +487,13 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     flex: 1,
+  },
+  errorText: {
+    color: "#D32F2F",
+    marginBottom: 8,
+  },
+  passwordInput: {
+    marginTop: 4,
   },
 });
 

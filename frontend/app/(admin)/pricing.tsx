@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Dimensions,
     ScrollView,
@@ -12,17 +12,20 @@ import {
     Text,
     TextInput,
     useTheme,
+    Snackbar,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
 import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
+import { useAuth } from "../../src/context/AuthContext";
+import { getPricingMatrix, updatePricingMatrix, type PricingMatrix } from "../../src/services/pricingService";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock pricing matrix
-const initialPricing: { [key: string]: { [key: string]: number } } = {};
+// Initialize empty pricing matrix
+const initialPricing: PricingMatrix = {};
 CAR_TYPES.forEach((carType) => {
   initialPricing[carType] = {};
   SERVICE_TYPES.forEach((serviceType) => {
@@ -32,8 +35,44 @@ CAR_TYPES.forEach((carType) => {
 
 export default function PricingScreen() {
   const theme = useTheme();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState("pricing");
-  const [pricing, setPricing] = useState(initialPricing);
+  const [pricing, setPricing] = useState<PricingMatrix>(initialPricing);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Fetch pricing matrix on mount
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchPricing = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const matrix = await getPricingMatrix(token);
+        
+        // Merge fetched data with initial structure to ensure all combinations exist
+        const mergedPricing: PricingMatrix = { ...initialPricing };
+        CAR_TYPES.forEach((carType) => {
+          SERVICE_TYPES.forEach((serviceType) => {
+            if (matrix[carType]?.[serviceType] !== undefined) {
+              mergedPricing[carType][serviceType] = matrix[carType][serviceType];
+            }
+          });
+        });
+        
+        setPricing(mergedPricing);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load pricing");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, [token]);
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
@@ -52,19 +91,85 @@ export default function PricingScreen() {
   };
 
   const handlePriceChange = (carType: string, serviceType: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setPricing({
-      ...pricing,
-      [carType]: {
-        ...pricing[carType],
-        [serviceType]: numValue,
-      },
-    });
+    // Allow empty string for user input, but store as 0
+    const trimmedValue = value.trim();
+    if (trimmedValue === "" || trimmedValue === "-") {
+      setPricing({
+        ...pricing,
+        [carType]: {
+          ...pricing[carType],
+          [serviceType]: 0,
+        },
+      });
+      return;
+    }
+
+    const numValue = parseFloat(trimmedValue);
+    // Only update if it's a valid number, and clamp to >= 0
+    if (!isNaN(numValue)) {
+      const clampedValue = Math.max(0, numValue);
+      setPricing({
+        ...pricing,
+        [carType]: {
+          ...pricing[carType],
+          [serviceType]: clampedValue,
+        },
+      });
+    }
   };
 
-  const handleSave = () => {
-    // TODO: Save to Firebase
-    console.log("Save pricing", pricing);
+  const validatePricing = (): string | null => {
+    for (const carType of CAR_TYPES) {
+      for (const serviceType of SERVICE_TYPES) {
+        const price = pricing[carType]?.[serviceType];
+        if (price === undefined || price === null) {
+          return `Price is required for ${carType} × ${serviceType}`;
+        }
+        if (typeof price !== "number" || price < 0 || !Number.isFinite(price)) {
+          return `Price must be a non-negative number for ${carType} × ${serviceType}`;
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleSave = async () => {
+    if (!token) {
+      setError("Not authenticated");
+      return;
+    }
+
+    const validationError = validatePricing();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      console.log("Saving pricing matrix:", pricing);
+      await updatePricingMatrix(token, pricing);
+      console.log("Pricing matrix saved successfully");
+      setSuccessMessage("Pricing matrix saved successfully");
+      // Refresh the pricing data after save
+      const matrix = await getPricingMatrix(token);
+      const mergedPricing: PricingMatrix = { ...initialPricing };
+      CAR_TYPES.forEach((carType) => {
+        SERVICE_TYPES.forEach((serviceType) => {
+          if (matrix[carType]?.[serviceType] !== undefined) {
+            mergedPricing[carType][serviceType] = matrix[carType][serviceType];
+          }
+        });
+      });
+      setPricing(mergedPricing);
+    } catch (err) {
+      console.error("Error saving pricing:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to save pricing";
+      setError(errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -95,6 +200,8 @@ export default function PricingScreen() {
               onPress={handleSave}
               style={styles.saveButton}
               labelStyle={styles.saveButtonLabel}
+              loading={saving}
+              disabled={saving || loading}
             >
               Save All
             </Button>
@@ -104,7 +211,13 @@ export default function PricingScreen() {
             Set base prices for each Car Type + Service Type combination
           </Text>
 
-          {isTablet ? (
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="bodyLarge">Loading pricing matrix...</Text>
+            </View>
+          ) : (
+            <>
+              {isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
                 <DataTable.Title style={styles.headerCell}>Car Type</DataTable.Title>
@@ -161,8 +274,28 @@ export default function PricingScreen() {
               ))}
             </View>
           )}
+            </>
+          )}
         </View>
       </ScrollView>
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(null)}
+        duration={4000}
+        style={styles.snackbar}
+      >
+        {error}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
+      >
+        {successMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -268,6 +401,14 @@ const styles = StyleSheet.create({
   },
   mobilePriceInputContent: {
     paddingVertical: 0,
+  },
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  snackbar: {
+    marginBottom: 16,
   },
 });
 

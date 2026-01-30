@@ -11,8 +11,10 @@ export const LEGACY_CAR_TYPE_TO_SCHEMA = {
 export const LEGACY_SERVICE_TYPE_TO_SCHEMA = {
   'Complete Wash': 'COMPLETE',
   'Outer Wash': 'OUTER',
-  'Interior Cleaning': 'INNER',
+  'Interior Wash': 'INNER',
+  'Interior Cleaning': 'INNER', // Keep for backward compatibility
   'Engine Wash': 'ENGINE',
+  'Chemical Wash': 'CHEMICAL',
 };
 
 export const SCHEMA_CAR_TYPE_TO_LEGACY = {
@@ -26,9 +28,9 @@ export const SCHEMA_CAR_TYPE_TO_LEGACY = {
 export const SCHEMA_WASH_TYPE_TO_LEGACY = {
   COMPLETE: 'Complete Wash',
   OUTER: 'Outer Wash',
-  INNER: 'Interior Cleaning',
+  INNER: 'Interior Wash',
   ENGINE: 'Engine Wash',
-  CHEMICAL: 'Complete Wash',
+  CHEMICAL: 'Chemical Wash',
 };
 
 

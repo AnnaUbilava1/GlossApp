@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   ScrollView,
@@ -12,46 +12,65 @@ import {
   IconButton,
   Text,
   useTheme,
+  Snackbar,
+  Chip,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
+import MasterPinModal from "../../src/components/MasterPinModal";
+import { useAuth } from "../../src/context/AuthContext";
+import {
+  getAllDiscounts,
+  updateDiscount,
+  deleteDiscount,
+  type Discount,
+} from "../../src/services/discountService";
+import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock data
-const mockDiscounts = [
-  {
-    id: "1",
-    name: "physical person 30%",
-    percentage: 30,
-    applicableTo: "Physical Person",
-  },
-  {
-    id: "2",
-    name: "physical person 50%",
-    percentage: 50,
-    applicableTo: "Physical Person",
-  },
-  {
-    id: "3",
-    name: "company1 30%",
-    percentage: 30,
-    applicableTo: "Company1",
-  },
-  {
-    id: "4",
-    name: "company2 50%",
-    percentage: 50,
-    applicableTo: "Company2",
-  },
-];
-
 export default function DiscountsScreen() {
   const theme = useTheme();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState("discounts");
-  const [discounts] = useState(mockDiscounts);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [masterPinForAction, setMasterPinForAction] = useState<string | null>(null);
+  const [discountToDelete, setDiscountToDelete] = useState<string | null>(null);
+
+  // Fetch discounts on mount
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchDiscounts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const allDiscounts = await getAllDiscounts(token);
+        setDiscounts(allDiscounts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load discounts");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDiscounts();
+  }, [token]);
+
+  const refreshDiscounts = async () => {
+    if (!token) return;
+    try {
+      const allDiscounts = await getAllDiscounts(token);
+      setDiscounts(allDiscounts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to refresh discounts");
+    }
+  };
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
@@ -69,24 +88,64 @@ export default function DiscountsScreen() {
     }
   };
 
-  const handleAddDiscount = () => {
-    // TODO: Implement add discount modal
-    console.log("Add discount");
+  const handleToggleActive = async (discount: Discount) => {
+    if (!token) {
+      setError("Not authenticated");
+      return;
+    }
+
+    // Physical person discounts cannot be modified
+    if (discount.id.startsWith("physical-")) {
+      setError("Physical person discounts cannot be modified");
+      return;
+    }
+
+    try {
+      await updateDiscount(token, discount.id, { active: !discount.active });
+      setSuccessMessage(discount.active ? "Discount deactivated" : "Discount activated");
+      await refreshDiscounts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update discount");
+    }
   };
 
-  const handleEdit = (id: string) => {
-    // TODO: Implement edit discount
-    console.log("Edit discount", id);
+  const handleDeleteClick = (discountId: string) => {
+    setDiscountToDelete(discountId);
+    setMasterPinForAction("");
   };
 
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete discount with PIN check
-    console.log("Delete discount", id);
+  const handleDeleteConfirm = async () => {
+    if (!token || !discountToDelete || !masterPinForAction) {
+      return;
+    }
+
+    if (masterPinForAction.trim() !== MASTER_PIN) {
+      setError("Incorrect PIN");
+      setMasterPinForAction(null);
+      setDiscountToDelete(null);
+      return;
+    }
+
+    try {
+      await deleteDiscount(token, discountToDelete, masterPinForAction.trim());
+      setSuccessMessage("Discount deleted successfully");
+      setMasterPinForAction(null);
+      setDiscountToDelete(null);
+      await refreshDiscounts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete discount");
+      setMasterPinForAction(null);
+      setDiscountToDelete(null);
+    }
+  };
+
+  const isPhysicalPersonDiscount = (discount: Discount) => {
+    return discount.id.startsWith("physical-");
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AdminHeader user={{ name: "John Doe" }} />
+      <AdminHeader user={user ? { name: user.name || user.email } : { name: "Admin" }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -107,56 +166,120 @@ export default function DiscountsScreen() {
             <Text variant="titleLarge" style={styles.title}>
               Discount Management
             </Text>
-            <Button
-              mode="contained"
-              icon="plus"
-              onPress={handleAddDiscount}
-              style={styles.addButton}
-              labelStyle={styles.addButtonLabel}
-            >
-              Add Discount
-            </Button>
           </View>
 
-          <View style={styles.discountsList}>
-            {discounts.map((discount) => (
-              <Card
-                key={discount.id}
-                style={styles.discountCard}
-                contentStyle={styles.discountCardContent}
-              >
-                <View style={styles.discountCardHeader}>
-                  <View style={styles.discountInfo}>
-                    <Text variant="titleMedium" style={styles.discountName}>
-                      {discount.name}
-                    </Text>
-                    <Text variant="bodySmall" style={styles.applicableTo}>
-                      Applicable To: {discount.applicableTo}
-                    </Text>
-                  </View>
-                  <Text style={styles.discountPercentage}>
-                    {discount.percentage}%
-                  </Text>
-                </View>
-                <View style={styles.discountActions}>
-                  <IconButton
-                    icon="pencil"
-                    size={20}
-                    iconColor="#2F80ED"
-                    onPress={() => handleEdit(discount.id)}
-                  />
-                  <IconButton
-                    icon="delete"
-                    size={20}
-                    iconColor="#D32F2F"
-                    onPress={() => handleDelete(discount.id)}
-                  />
-                </View>
-              </Card>
-            ))}
-          </View>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            Company discounts are managed through the Companies screen. Physical person discounts are system defaults.
+          </Text>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="bodyLarge">Loading discounts...</Text>
+            </View>
+          ) : discounts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text variant="bodyLarge" style={styles.emptyText}>
+                No discounts found
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.discountsList}>
+              {discounts.map((discount) => {
+                const isPhysical = isPhysicalPersonDiscount(discount);
+                return (
+                  <Card
+                    key={discount.id}
+                    style={[
+                      styles.discountCard,
+                      !discount.active && styles.discountCardInactive,
+                    ]}
+                    contentStyle={styles.discountCardContent}
+                  >
+                    <View style={styles.discountCardHeader}>
+                      <View style={styles.discountInfo}>
+                        <View style={styles.discountNameRow}>
+                          <Text variant="titleMedium" style={styles.discountName}>
+                            {discount.companyName} {discount.percentage}%
+                          </Text>
+                          {!discount.active && (
+                            <Chip mode="outlined" compact style={styles.inactiveChip}>
+                              Inactive
+                            </Chip>
+                          )}
+                          {isPhysical && (
+                            <Chip mode="outlined" compact style={styles.systemChip}>
+                              System
+                            </Chip>
+                          )}
+                        </View>
+                        {!isPhysical && discount.companyId && (
+                          <Text variant="bodySmall" style={styles.companyId}>
+                            Company ID: {discount.companyId}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.discountPercentage}>
+                        {discount.percentage}%
+                      </Text>
+                    </View>
+                    {!isPhysical && (
+                      <View style={styles.discountActions}>
+                        <Button
+                          mode={discount.active ? "outlined" : "contained"}
+                          icon={discount.active ? "pause" : "play"}
+                          onPress={() => handleToggleActive(discount)}
+                          style={styles.toggleButton}
+                          compact
+                        >
+                          {discount.active ? "Deactivate" : "Activate"}
+                        </Button>
+                        <IconButton
+                          icon="delete"
+                          size={20}
+                          iconColor="#D32F2F"
+                          onPress={() => handleDeleteClick(discount.id)}
+                        />
+                      </View>
+                    )}
+                  </Card>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      <MasterPinModal
+        visible={discountToDelete !== null}
+        onDismiss={() => {
+          setDiscountToDelete(null);
+          setMasterPinForAction(null);
+        }}
+        onCorrectPin={(pin) => {
+          setMasterPinForAction(pin);
+          handleDeleteConfirm();
+        }}
+        title="Delete Discount"
+        description="Enter Master PIN to confirm deletion. Discounts with wash records cannot be deleted."
+      />
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(null)}
+        duration={4000}
+        style={styles.snackbar}
+      >
+        {error}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
+      >
+        {successMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -193,11 +316,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#212121",
   },
-  addButton: {
-    backgroundColor: "#2F80ED",
+  subtitle: {
+    color: "#757575",
+    marginBottom: 24,
   },
-  addButtonLabel: {
-    color: "#FFFFFF",
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: "#757575",
   },
   discountsList: {
     gap: 12,
@@ -205,6 +339,10 @@ const styles = StyleSheet.create({
   discountCard: {
     marginBottom: 12,
     backgroundColor: "#FAFAFA",
+  },
+  discountCardInactive: {
+    opacity: 0.6,
+    backgroundColor: "#F5F5F5",
   },
   discountCardContent: {
     padding: 16,
@@ -218,12 +356,25 @@ const styles = StyleSheet.create({
   discountInfo: {
     flex: 1,
   },
-  discountName: {
-    fontWeight: "600",
+  discountNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginBottom: 4,
   },
-  applicableTo: {
+  discountName: {
+    fontWeight: "600",
+  },
+  inactiveChip: {
+    height: 24,
+  },
+  systemChip: {
+    height: 24,
+    backgroundColor: "#E3F2FD",
+  },
+  companyId: {
     color: "#757575",
+    fontSize: 12,
   },
   discountPercentage: {
     fontSize: 24,
@@ -234,6 +385,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
+    gap: 8,
+  },
+  toggleButton: {
+    marginRight: 4,
+  },
+  snackbar: {
+    marginBottom: 16,
   },
 });
 

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   ScrollView,
@@ -12,38 +12,71 @@ import {
   IconButton,
   Text,
   useTheme,
+  Snackbar,
+  Chip,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
+import CompanyFormModal from "../../src/components/CompanyFormModal";
+import MasterPinModal from "../../src/components/MasterPinModal";
+import { useAuth } from "../../src/context/AuthContext";
+import {
+  getAllCompanies,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  type Company,
+  type CreateCompanyPayload,
+  type UpdateCompanyPayload,
+} from "../../src/services/companyService";
+import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Mock data
-const mockCompanies = [
-  {
-    id: "1",
-    name: "Company1",
-    contactPerson: "Bob Johnson",
-    email: "contact@company1.com",
-    phone: "+1234567892",
-    defaultDiscount: 30,
-  },
-  {
-    id: "2",
-    name: "Company2",
-    contactPerson: "Alice Brown",
-    email: "contact@company2.com",
-    phone: "+1234567893",
-    defaultDiscount: 50,
-  },
-];
-
 export default function CompaniesScreen() {
   const theme = useTheme();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState("companies");
-  const [companies] = useState(mockCompanies);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [masterPinForAction, setMasterPinForAction] = useState<string | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
+
+  // Fetch companies on mount and when token changes
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchCompanies = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const allCompanies = await getAllCompanies(token);
+        setCompanies(allCompanies);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load companies");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, [token]);
+
+  const refreshCompanies = async () => {
+    if (!token) return;
+    try {
+      const allCompanies = await getAllCompanies(token);
+      setCompanies(allCompanies);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to refresh companies");
+    }
+  };
 
   const handleTabChange = (key: string) => {
     if (key === "vehicles") {
@@ -61,24 +94,82 @@ export default function CompaniesScreen() {
     }
   };
 
-  const handleAddCompany = () => {
-    // TODO: Implement add company modal
-    console.log("Add company");
+  const handleAddCompany = async (payload: CreateCompanyPayload | UpdateCompanyPayload) => {
+    if (!token) {
+      setError("Not authenticated");
+      return;
+    }
+
+    try {
+      // Convert to CreateCompanyPayload (name and contact are required)
+      const createPayload: CreateCompanyPayload = {
+        name: (payload as CreateCompanyPayload).name || (payload as UpdateCompanyPayload).name || "",
+        contact: (payload as CreateCompanyPayload).contact || (payload as UpdateCompanyPayload).contact || "",
+        discountPercentages: (payload as CreateCompanyPayload).discountPercentages || (payload as UpdateCompanyPayload).discountPercentages,
+      };
+      await createCompany(token, createPayload);
+      setSuccessMessage("Company added successfully");
+      await refreshCompanies();
+    } catch (err) {
+      throw err; // Re-throw to let modal handle it
+    }
   };
 
-  const handleEdit = (id: string) => {
-    // TODO: Implement edit company
-    console.log("Edit company", id);
+  const handleEditCompany = async (payload: CreateCompanyPayload | UpdateCompanyPayload) => {
+    if (!token || !editingCompany) {
+      setError("Not authenticated");
+      return;
+    }
+
+    try {
+      // Convert to UpdateCompanyPayload (all fields optional)
+      const updatePayload: UpdateCompanyPayload = {
+        name: (payload as CreateCompanyPayload).name || (payload as UpdateCompanyPayload).name,
+        contact: (payload as CreateCompanyPayload).contact || (payload as UpdateCompanyPayload).contact,
+        discountPercentages: (payload as CreateCompanyPayload).discountPercentages || (payload as UpdateCompanyPayload).discountPercentages,
+      };
+      await updateCompany(token, editingCompany.id, updatePayload);
+      setSuccessMessage("Company updated successfully");
+      setEditingCompany(null);
+      await refreshCompanies();
+    } catch (err) {
+      throw err; // Re-throw to let modal handle it
+    }
   };
 
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete company with PIN check
-    console.log("Delete company", id);
+  const handleDeleteClick = (companyId: string) => {
+    setCompanyToDelete(companyId);
+    setMasterPinForAction("");
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!token || !companyToDelete || !masterPinForAction) {
+      return;
+    }
+
+    if (masterPinForAction.trim() !== MASTER_PIN) {
+      setError("Incorrect PIN");
+      setMasterPinForAction(null);
+      setCompanyToDelete(null);
+      return;
+    }
+
+    try {
+      await deleteCompany(token, companyToDelete, masterPinForAction.trim());
+      setSuccessMessage("Company deleted successfully");
+      setMasterPinForAction(null);
+      setCompanyToDelete(null);
+      await refreshCompanies();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete company");
+      setMasterPinForAction(null);
+      setCompanyToDelete(null);
+    }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AdminHeader user={{ name: "John Doe" }} />
+      <AdminHeader user={user ? { name: user.name || user.email } : { name: "Admin" }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
@@ -102,7 +193,10 @@ export default function CompaniesScreen() {
             <Button
               mode="contained"
               icon="plus"
-              onPress={handleAddCompany}
+              onPress={() => {
+                setEditingCompany(null);
+                setShowAddModal(true);
+              }}
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
@@ -110,25 +204,45 @@ export default function CompaniesScreen() {
             </Button>
           </View>
 
-          {isTablet ? (
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="bodyLarge">Loading companies...</Text>
+            </View>
+          ) : companies.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text variant="bodyLarge" style={styles.emptyText}>
+                No companies found
+              </Text>
+            </View>
+          ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
                 <DataTable.Title style={styles.headerCell}>Company Name</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Contact Person</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Email</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Phone</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Default Discount</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>Contact</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>Discounts</DataTable.Title>
                 <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
               </DataTable.Header>
 
               {companies.map((company) => (
                 <DataTable.Row key={company.id} style={styles.tableRow}>
                   <DataTable.Cell style={styles.cell}>{company.name}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.contactPerson}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.email}</DataTable.Cell>
-                  <DataTable.Cell style={styles.cell}>{company.phone}</DataTable.Cell>
                   <DataTable.Cell style={styles.cell}>
-                    <Text style={styles.discountText}>{company.defaultDiscount}%</Text>
+                    <Text variant="bodySmall">{company.contact}</Text>
+                  </DataTable.Cell>
+                  <DataTable.Cell style={styles.cell}>
+                    {company.discounts.length > 0 ? (
+                      <View style={styles.discountChips}>
+                        {company.discounts.map((discount) => (
+                          <Chip key={discount.id} compact style={styles.discountChip}>
+                            {discount.percentage}%
+                          </Chip>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text variant="bodySmall" style={styles.noDiscounts}>
+                        No discounts
+                      </Text>
+                    )}
                   </DataTable.Cell>
                   <DataTable.Cell style={styles.actionsCell}>
                     <View style={styles.actionsContainer}>
@@ -136,13 +250,16 @@ export default function CompaniesScreen() {
                         icon="pencil"
                         size={20}
                         iconColor="#2F80ED"
-                        onPress={() => handleEdit(company.id)}
+                        onPress={() => {
+                          setEditingCompany(company);
+                          setShowAddModal(true);
+                        }}
                       />
                       <IconButton
                         icon="delete"
                         size={20}
                         iconColor="#D32F2F"
-                        onPress={() => handleDelete(company.id)}
+                        onPress={() => handleDeleteClick(company.id)}
                       />
                     </View>
                   </DataTable.Cell>
@@ -155,29 +272,39 @@ export default function CompaniesScreen() {
                 <View key={company.id} style={styles.mobileCard}>
                   <View style={styles.mobileCardHeader}>
                     <Text variant="titleMedium">{company.name}</Text>
-                    <Text style={[styles.discountText, { fontSize: 16 }]}>
-                      {company.defaultDiscount}%
-                    </Text>
+                    {company.discounts.length > 0 && (
+                      <View style={styles.mobileDiscounts}>
+                        {company.discounts.map((discount) => (
+                          <Chip key={discount.id} compact style={styles.discountChip}>
+                            {discount.percentage}%
+                          </Chip>
+                        ))}
+                      </View>
+                    )}
                   </View>
-                  <Text variant="bodyMedium">{company.contactPerson}</Text>
-                  <Text variant="bodySmall" style={styles.mobileDetails}>
-                    {company.email}
+                  <Text variant="bodyMedium" style={styles.mobileDetails}>
+                    {company.contact}
                   </Text>
-                  <Text variant="bodySmall" style={styles.mobileDetails}>
-                    {company.phone}
-                  </Text>
+                  {company.discounts.length === 0 && (
+                    <Text variant="bodySmall" style={styles.noDiscounts}>
+                      No discounts configured
+                    </Text>
+                  )}
                   <View style={styles.mobileActions}>
                     <IconButton
                       icon="pencil"
                       size={20}
                       iconColor="#2F80ED"
-                      onPress={() => handleEdit(company.id)}
+                      onPress={() => {
+                        setEditingCompany(company);
+                        setShowAddModal(true);
+                      }}
                     />
                     <IconButton
                       icon="delete"
                       size={20}
                       iconColor="#D32F2F"
-                      onPress={() => handleDelete(company.id)}
+                      onPress={() => handleDeleteClick(company.id)}
                     />
                   </View>
                 </View>
@@ -186,6 +313,54 @@ export default function CompaniesScreen() {
           )}
         </View>
       </ScrollView>
+
+      <CompanyFormModal
+        visible={showAddModal}
+        onDismiss={() => {
+          setShowAddModal(false);
+          setEditingCompany(null);
+        }}
+        onSave={async (payload) => {
+          if (editingCompany) {
+            await handleEditCompany(payload);
+          } else {
+            await handleAddCompany(payload);
+          }
+        }}
+        editingCompany={editingCompany}
+      />
+
+      <MasterPinModal
+        visible={companyToDelete !== null}
+        onDismiss={() => {
+          setCompanyToDelete(null);
+          setMasterPinForAction(null);
+        }}
+        onCorrectPin={(pin) => {
+          setMasterPinForAction(pin);
+          handleDeleteConfirm();
+        }}
+        title="Delete Company"
+        description="Enter Master PIN to confirm deletion"
+      />
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(null)}
+        duration={4000}
+        style={styles.snackbar}
+      >
+        {error}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
+      >
+        {successMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 }
@@ -244,6 +419,18 @@ const styles = StyleSheet.create({
     color: "#2F80ED",
     fontWeight: "600",
   },
+  discountChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  discountChip: {
+    height: 24,
+  },
+  noDiscounts: {
+    color: "#9E9E9E",
+    fontStyle: "italic",
+  },
   actionsCell: {
     flex: 0.8,
     justifyContent: "center",
@@ -252,6 +439,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: "#757575",
   },
   mobileContainer: {
     gap: 12,
@@ -268,6 +468,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  mobileDiscounts: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
   mobileDetails: {
     color: "#757575",
     marginTop: 4,
@@ -276,6 +481,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: 12,
+  },
+  snackbar: {
+    marginBottom: 16,
   },
 });
 

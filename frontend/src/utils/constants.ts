@@ -13,8 +13,9 @@ export const CAR_TYPES = [
 export const SERVICE_TYPES = [
   'Complete Wash',
   'Outer Wash',
-  'Interior Cleaning',
+  'Interior Wash',
   'Engine Wash',
+  'Chemical Wash',
 ] as const;
 
 // Status Colors for records

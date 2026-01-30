@@ -226,8 +226,16 @@ router.get('/', async (req, res) => {
 
     if (startDate || endDate) {
       where.startTime = {};
-      if (startDate) where.startTime.gte = new Date(startDate);
-      if (endDate) where.startTime.lte = new Date(endDate);
+      if (startDate) {
+        // Start of day (inclusive)
+        where.startTime.gte = new Date(String(startDate));
+      }
+      if (endDate) {
+        // End of day (inclusive): 23:59:59.999 so records created during that day are included
+        const end = new Date(String(endDate));
+        end.setUTCHours(23, 59, 59, 999);
+        where.startTime.lte = end;
+      }
     }
 
     const records = await prisma.washRecord.findMany({
@@ -360,7 +368,7 @@ router.get('/:id', async (req, res) => {
  *               serviceType:
  *                 type: string
  *                 description: Legacy UI wash type (mapped to schema enum WashType).
- *                 enum: [Complete Wash, Outer Wash, Interior Cleaning, Engine Wash]
+ *                 enum: [Complete Wash, Outer Wash, Interior Wash, Engine Wash, Chemical Wash]
  *               washType:
  *                 type: string
  *                 description: Schema enum WashType (e.g. COMPLETE, OUTER, INNER, ENGINE, CHEMICAL).
@@ -433,7 +441,7 @@ router.post(
     body('washType').optional().isString(),
     body('discountPercent').optional().isFloat({ min: 0, max: 100 }),
     body('price').optional().isFloat({ min: 0 }),
-    body('boxNumber').optional().isInt({ min: 0 }),
+    body('boxNumber').optional().isInt(),
     body('washerName').optional().isString(),
     body('washerUsername').optional().isString(),
     body('washerId').optional().isInt({ min: 1 }),
@@ -483,8 +491,8 @@ router.post(
         req.body.boxNumber === undefined || req.body.boxNumber === null
           ? 0
           : Number(req.body.boxNumber);
-      if (!Number.isInteger(boxNumber) || boxNumber < 0) {
-        return res.status(400).json({ error: 'boxNumber must be an integer >= 0' });
+      if (!Number.isInteger(boxNumber)) {
+        return res.status(400).json({ error: 'boxNumber must be an integer' });
       }
 
       const originalPrice = await resolveOriginalPrice({
@@ -542,6 +550,144 @@ router.post(
       res.status(201).json({ record: recordToLegacy(record), rawRecord: record });
     } catch (error) {
       console.error('Create record error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /api/records/{id}/finish:
+ *   post:
+ *     tags:
+ *       - Records
+ *     summary: Mark a wash record as finished
+ *     description: >
+ *       Sets the end time to now, marking the record as finished. Accessible to any authenticated user.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Record ID
+ *     responses:
+ *       200:
+ *         description: Record marked as finished
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Record not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/:id/finish', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.washRecord.findUnique({
+      where: { id },
+      select: { id: true, endTime: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+
+    if (existing.endTime) {
+      // Already finished; treat as idempotent
+      return res.json({ message: 'Record already finished' });
+    }
+
+    const record = await prisma.washRecord.update({
+      where: { id },
+      data: { endTime: new Date() },
+    });
+
+    res.json({ message: 'Record marked as finished', record: recordToLegacy(record) });
+  } catch (error) {
+    console.error('Finish record error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @openapi
+ * /api/records/{id}/pay:
+ *   post:
+ *     tags:
+ *       - Records
+ *     summary: Mark a wash record as paid
+ *     description: >
+ *       Sets the payment method (cash or card), marking the record as paid. Admin only.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Record ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentMethod
+ *             properties:
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [cash, card]
+ *     responses:
+ *       200:
+ *         description: Record marked as paid
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Record not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post(
+  '/:id/pay',
+  requireAdmin,
+  [body('paymentMethod').isIn(['cash', 'card']).withMessage('paymentMethod must be cash or card')],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { paymentMethod } = req.body;
+
+      const existing = await prisma.washRecord.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return res.status(404).json({ error: 'Record not found' });
+      }
+
+      const record = await prisma.washRecord.update({
+        where: { id },
+        data: { paymentMethod },
+      });
+
+      res.json({ message: 'Record marked as paid', record: recordToLegacy(record) });
+    } catch (error) {
+      console.error('Mark record paid error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -685,8 +831,8 @@ router.put(
           req.body.boxNumber === undefined || req.body.boxNumber === null
             ? 0
             : Number(req.body.boxNumber);
-        if (!Number.isInteger(boxNumber) || boxNumber < 0) {
-          return res.status(400).json({ error: 'boxNumber must be an integer >= 0' });
+        if (!Number.isInteger(boxNumber)) {
+          return res.status(400).json({ error: 'boxNumber must be an integer' });
         }
         updateData.boxNumber = boxNumber;
       }

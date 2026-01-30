@@ -21,6 +21,7 @@ import {
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../src/components/AppHeader";
+import LicenseAutocomplete from "../../src/components/LicenseAutocomplete";
 import TabNavigation from "../../src/components/TabNavigation";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
@@ -39,12 +40,11 @@ export default function NewRecordScreen() {
   const [carType, setCarType] = useState<string>("");
   const [serviceType, setServiceType] = useState<string>("");
   const [boxNumber, setBoxNumber] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<"" | "cash" | "card">("");
 
   // Company + discount selection (combined dropdown)
   type DiscountOption = {
     label: string;
-    companyId: string;
+    companyId: string | null;
     discountPercent: number;
     discountId?: string;
   };
@@ -121,17 +121,36 @@ export default function NewRecordScreen() {
       washerId: String(selectedWasher?.id ?? ""),
     });
 
+    const quoteUrl = `/api/pricing/quote?${params.toString()}`;
+    console.log("Requesting pricing quote:", quoteUrl);
+
     apiFetch<{
       originalPrice: number;
       discountedPrice: number;
       washerCut: number;
-    }>(`/api/pricing/quote?${params.toString()}`, { token: auth.token })
+    }>(quoteUrl, { token: auth.token })
       .then((q) => {
-        setOriginalPrice(q.originalPrice);
-        setDiscountedPrice(q.discountedPrice);
-        setWasherCut(q.washerCut);
+        console.log("Pricing quote response:", q);
+        if (q && typeof q.originalPrice === 'number' && q.originalPrice > 0) {
+          setOriginalPrice(q.originalPrice);
+          setDiscountedPrice(q.discountedPrice);
+          setWasherCut(q.washerCut);
+        } else {
+          console.error("Invalid quote response:", q);
+          setError(`Invalid pricing quote: ${JSON.stringify(q)}`);
+          setOriginalPrice(null);
+          setDiscountedPrice(null);
+          setWasherCut(null);
+        }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to calculate quote"))
+      .catch((e) => {
+        console.error("Pricing quote error:", e);
+        const errorMsg = e instanceof Error ? e.message : "Failed to calculate quote";
+        setError(errorMsg);
+        setOriginalPrice(null);
+        setDiscountedPrice(null);
+        setWasherCut(null);
+      })
       .finally(() => setLoadingQuote(false));
   }, [auth.token, canQuote, carType, serviceType, selectedDiscount?.discountPercent, selectedWasher?.id]);
 
@@ -157,10 +176,9 @@ export default function NewRecordScreen() {
           carType,
           serviceType,
           washerId: selectedWasher.id,
-          companyId: selectedDiscount.companyId,
+          companyId: selectedDiscount.companyId || undefined,
           discountPercent: selectedDiscount.discountPercent,
           boxNumber: boxNum,
-          paymentMethod: paymentMethod || undefined,
         }),
       });
       router.push("/(app)/dashboard");
@@ -336,13 +354,18 @@ export default function NewRecordScreen() {
               <View style={styles.twoColumnContainer}>
                 {/* Left Column */}
                 <View style={styles.column}>
-                  {renderInput(
-                    "Car License Number",
-                    licensePlate,
-                    setLicensePlate,
-                    "ABC-123",
-                    true
-                  )}
+                  <LicenseAutocomplete
+                    value={licensePlate}
+                    onChange={setLicensePlate}
+                    token={auth.token!}
+                    required
+                    onVehicleSelected={(vehicle) => {
+                      // Auto-fill car category when vehicle is found
+                      if (vehicle.carCategory) {
+                        setCarType(vehicle.carCategory);
+                      }
+                    }}
+                  />
 
                   <SearchableSelect
                     label="Company & Discount"
@@ -438,18 +461,6 @@ export default function NewRecordScreen() {
                     false
                   )}
 
-                  <SearchableSelect
-                    label="Payment Method"
-                    valueText={
-                      paymentMethod === "" ? "" : paymentMethod === "cash" ? "Cash" : "Card"
-                    }
-                    options={[
-                      { key: "", label: "Not paid yet" },
-                      { key: "cash", label: "Cash" },
-                      { key: "card", label: "Card" },
-                    ]}
-                    onSelect={(key) => setPaymentMethod(key as "" | "cash" | "card")}
-                  />
                 </View>
               </View>
 

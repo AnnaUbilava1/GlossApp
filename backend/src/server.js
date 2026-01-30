@@ -5,9 +5,12 @@ import express from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import authRoutes from './routes/auth.js';
+import companyRoutes from './routes/companies.js';
 import discountOptionsRoutes from './routes/discountOptions.js';
 import pricingRoutes from './routes/pricing.js';
 import recordRoutes from './routes/records.js';
+import userRoutes from './routes/users.js';
+import vehicleRoutes from './routes/vehicles.js';
 import washerRoutes from './routes/washers.js';
 
 // Load environment variables
@@ -18,7 +21,7 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0', // Specify the OpenAPI version
+    openapi: '3.0.0', 
     info: {
       title: 'GlossApp API Documentation',
       version: '1.0.0',
@@ -26,7 +29,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`, // Your server URL
+        url: `http://localhost:${PORT}`, 
         description: 'Local Development Server',
       },
     ],
@@ -83,8 +86,11 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/records', recordRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/washers', washerRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/companies', companyRoutes);
 app.use('/api/discount-options', discountOptionsRoutes);
 
 // Error handling middleware
