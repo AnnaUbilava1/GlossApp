@@ -102,7 +102,7 @@ router.get('/quote', async (req, res) => {
       return res.status(404).json({ error: 'Washer not found' });
     }
 
-    const washerCut = Math.max(0, discountedPrice * ((Number(washer.salaryPercentage) || 0) / 100));
+    const washerCut = Math.max(0, originalPrice * ((Number(washer.salaryPercentage) || 0) / 100));
 
     res.json({
       carType,

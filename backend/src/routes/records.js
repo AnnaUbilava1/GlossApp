@@ -151,9 +151,9 @@ function computeDiscountedPrice(originalPrice, discountPercentage) {
   return Math.max(0, discounted);
 }
 
-function computeWasherCut(discountedPrice, washerSalaryPercentage) {
+function computeWasherCut(originalPrice, washerSalaryPercentage) {
   const pct = Number(washerSalaryPercentage) || 0;
-  const cut = discountedPrice * (pct / 100);
+  const cut = originalPrice * (pct / 100);
   return Math.max(0, cut);
 }
 
@@ -508,7 +508,7 @@ router.post(
       }
 
       const discountedPrice = computeDiscountedPrice(originalPrice, discountPercentage);
-      const washerCut = computeWasherCut(discountedPrice, washer.salaryPercentage);
+      const washerCut = computeWasherCut(originalPrice, washer.salaryPercentage);
 
       const vehicleId = await resolveVehicleId({ licensePlate, carCategory });
       const { companyId, companyName } = await resolveCompanySnapshot(req.body.companyId);
@@ -926,7 +926,7 @@ router.put(
           washerSalaryPercentage = updatedWasher?.salaryPercentage ?? washerSalaryPercentage;
         }
 
-        const washerCut = computeWasherCut(discountedPrice, washerSalaryPercentage);
+        const washerCut = computeWasherCut(originalPrice, washerSalaryPercentage);
 
         updateData.originalPrice = toDecimalString(originalPrice);
         updateData.discountedPrice = toDecimalString(discountedPrice);
