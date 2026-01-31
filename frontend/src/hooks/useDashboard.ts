@@ -29,7 +29,7 @@ export function useDashboard(token: string | null) {
   const [records, setRecords] = useState<DashboardRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<string>(todayDateString());
+  const [startDate, setStartDate] = useState<string>("2026-01-01");
   const [endDate, setEndDate] = useState<string>(todayDateString());
   const [refreshKey, setRefreshKey] = useState(0);
 
