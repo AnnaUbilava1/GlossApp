@@ -25,6 +25,7 @@ import LicenseAutocomplete from "../../src/components/LicenseAutocomplete";
 import TabNavigation from "../../src/components/TabNavigation";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
+import { useDashboard } from "../../src/hooks/useDashboard";
 import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
@@ -34,6 +35,9 @@ export default function NewRecordScreen() {
   const theme = useTheme();
   const auth = useAuth();
   const [activeTab, setActiveTab] = useState("new-record");
+  
+  // Get record count for tab display
+  const { records } = useDashboard(auth.token);
 
   // Form state (schema-first intent, legacy-string inputs mapped by backend)
   const [licensePlate, setLicensePlate] = useState("");
@@ -331,7 +335,7 @@ export default function NewRecordScreen() {
             <TabNavigation
               tabs={[
                 { key: "new-record", label: "New Record" },
-                { key: "all-records", label: "All Records", count: 0 },
+                { key: "all-records", label: "All Records", count: records.length },
               ]}
               activeTab={activeTab}
               onTabChange={handleTabChange}

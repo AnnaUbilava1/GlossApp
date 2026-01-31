@@ -9,13 +9,13 @@ export default function AdminLayout() {
 
   useEffect(() => {
     // Wait until the router has resolved initial segments
-    if (!segments || segments.length === 0) {
+    if (!segments || segments.length < 1) {
       return;
     }
 
     // If not authenticated, redirect to login
     if (!token || !user) {
-      router.replace("/(auth)/login");
+      router.replace("/(auth)");
       return;
     }
 
