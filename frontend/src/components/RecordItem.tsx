@@ -27,23 +27,29 @@ export default function RecordItem({
 
   return (
     <DataTable.Row style={[styles.tableRow, { backgroundColor: bgColor }]}>
-      <DataTable.Cell style={styles.cell}>
+      <DataTable.Cell style={[styles.cell, styles.licenseCell]}>
         {record.licenseNumber}
       </DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>{record.carType}</DataTable.Cell>
-      <DataTable.Cell style={styles.cell} textStyle={styles.cellText}>
+      <DataTable.Cell style={[styles.cell, styles.carTypeCell]}>{record.carType}</DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.companyCell]} textStyle={styles.cellText}>
         {record.companyDiscount}
       </DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>{record.serviceType}</DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>
+      <DataTable.Cell style={[styles.cell, styles.serviceCell]}>{record.serviceType}</DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.priceCell]}>
+        <Text style={styles.priceText}>${(record.originalPrice ?? 0).toFixed(2)}</Text>
+      </DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.priceCell]}>
         <Text style={styles.priceText}>${record.price.toFixed(2)}</Text>
       </DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>{record.boxNumber}</DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>{record.washerName}</DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>
+      <DataTable.Cell style={[styles.cell, styles.priceCell]}>
+        <Text style={styles.priceText}>${(record.washerCut ?? 0).toFixed(2)}</Text>
+      </DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.boxCell]}>{record.boxNumber}</DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.washerCell]}>{record.washerName}</DataTable.Cell>
+      <DataTable.Cell style={[styles.cell, styles.timeCell]}>
         {String(record.startTime)}
       </DataTable.Cell>
-      <DataTable.Cell style={styles.cell}>
+      <DataTable.Cell style={[styles.cell, styles.timeCell]}>
         {record.endTime ? String(record.endTime) : "—"}
       </DataTable.Cell>
       <DataTable.Cell style={styles.actionsCell}>
@@ -109,6 +115,38 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
   },
+  licenseCell: {
+    flex: 1.2,
+    minWidth: 100,
+  },
+  carTypeCell: {
+    flex: 0.9,
+    minWidth: 80,
+  },
+  companyCell: {
+    flex: 1.5,
+    minWidth: 140,
+  },
+  serviceCell: {
+    flex: 1.1,
+    minWidth: 100,
+  },
+  priceCell: {
+    flex: 0.8,
+    minWidth: 90,
+  },
+  boxCell: {
+    flex: 0.5,
+    minWidth: 50,
+  },
+  washerCell: {
+    flex: 1,
+    minWidth: 80,
+  },
+  timeCell: {
+    flex: 1.3,
+    minWidth: 120,
+  },
   cellText: {
     fontSize: 12,
   },
@@ -118,6 +156,7 @@ const styles = StyleSheet.create({
   },
   actionsCell: {
     flex: 1.5,
+    minWidth: 150,
     justifyContent: "center",
   },
   actionsContainer: {

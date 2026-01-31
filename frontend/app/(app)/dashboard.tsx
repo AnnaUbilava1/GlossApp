@@ -2,10 +2,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  View
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    View
 } from "react-native";
 import { Button, DataTable, IconButton, Text, TextInput, useTheme, Snackbar } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -162,8 +162,8 @@ export default function DashboardScreen() {
       onPayment={() => handlePayment(record.id)}
       onEdit={() => handleEditClick(record.id)}
       onDelete={() => handleDeleteClick(record.id)}
-    />
-  );
+            />
+    );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
@@ -227,16 +227,18 @@ export default function DashboardScreen() {
           {isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>License Number</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Car Type</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Company & Discount</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Service</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Price</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Box Number</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Washer</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Start Time</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>End Time</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>License Number</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>Car Type</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.companyCell]}>Company & Discount</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>Service</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Original Price</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Price</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Washer Cut</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.boxCell]}>Box</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.washerCell]}>Washer</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>Start Time</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>End Time</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>Actions</DataTable.Title>
               </DataTable.Header>
 
               {records.map((record) => renderRecordRow(record))}
@@ -262,6 +264,9 @@ export default function DashboardScreen() {
                     <View style={styles.mobileCardBody}>
                       <Text variant="bodyMedium">{record.carType} • {record.serviceType}</Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
+                        Original: ${(record.originalPrice ?? 0).toFixed(2)} • Washer Cut: ${(record.washerCut ?? 0).toFixed(2)}
+                      </Text>
+                      <Text variant="bodySmall" style={styles.mobileDetails}>
                         Box {record.boxNumber} • {record.washerName}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileTime}>
@@ -284,10 +289,10 @@ export default function DashboardScreen() {
                             Paid
                           </Button>
                         ) : auth.user?.role === "admin" ? (
-                          <Button
-                            mode="contained"
-                            compact
-                            onPress={() => handlePayment(record.id)}
+                        <Button
+                          mode="contained"
+                          compact
+                          onPress={() => handlePayment(record.id)}
                             style={styles.paymentButtonUnpaid}
                           >
                             Unpaid
@@ -295,23 +300,23 @@ export default function DashboardScreen() {
                         ) : (
                           <Button mode="contained" compact style={styles.paymentButtonUnpaid} disabled>
                             Unpaid
-                          </Button>
+                        </Button>
                         )
                       )}
                       {auth.user?.role === "admin" && (
                         <>
-                          <IconButton
-                            icon="pencil"
-                            size={20}
-                            iconColor="#2F80ED"
+                      <IconButton
+                        icon="pencil"
+                        size={20}
+                        iconColor="#2F80ED"
                             onPress={() => handleEditClick(record.id)}
-                          />
-                          <IconButton
-                            icon="delete"
-                            size={20}
-                            iconColor="#D32F2F"
+                      />
+                      <IconButton
+                        icon="delete"
+                        size={20}
+                        iconColor="#D32F2F"
                             onPress={() => handleDeleteClick(record.id)}
-                          />
+                      />
                         </>
                       )}
                     </View>
@@ -429,16 +434,49 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
   },
+  licenseCell: {
+    flex: 1.2,
+    minWidth: 100,
+  },
+  carTypeCell: {
+    flex: 0.9,
+    minWidth: 80,
+  },
+  companyCell: {
+    flex: 1.5,
+    minWidth: 140,
+  },
+  serviceCell: {
+    flex: 1.1,
+    minWidth: 100,
+  },
+  priceCell: {
+    flex: 0.8,
+    minWidth: 90,
+  },
+  boxCell: {
+    flex: 0.5,
+    minWidth: 50,
+  },
+  washerCell: {
+    flex: 1,
+    minWidth: 80,
+  },
+  timeCell: {
+    flex: 1.3,
+    minWidth: 120,
+  },
+  actionsCell: {
+    flex: 1.5,
+    minWidth: 150,
+    justifyContent: "center",
+  },
   cellText: {
     fontSize: 12,
   },
   priceText: {
     color: "#2F80ED",
     fontWeight: "600",
-  },
-  actionsCell: {
-    flex: 1.5,
-    justifyContent: "center",
   },
   actionsContainer: {
     flexDirection: "row",

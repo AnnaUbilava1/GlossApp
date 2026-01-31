@@ -23,8 +23,21 @@ function toDecimalString(value) {
 
 function recordToLegacy(record) {
   const discountPercent = record.discountPercentage ?? 0;
-  const discountedPriceNum = record.discountedPrice ? Number(record.discountedPrice) : 0;
-  const originalPriceNum = record.originalPrice ? Number(record.originalPrice) : 0;
+  
+  // Prisma Decimal fields need to be converted properly
+  // Prisma returns Decimal objects which need .toString() before Number() conversion
+  const getDecimalValue = (value) => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return value;
+    // Prisma Decimal object or string - convert via toString() then to number
+    const str = value.toString();
+    const num = Number(str);
+    return isNaN(num) ? 0 : num;
+  };
+  
+  const discountedPriceNum = getDecimalValue(record.discountedPrice);
+  const originalPriceNum = getDecimalValue(record.originalPrice);
+  const washerCutNum = getDecimalValue(record.washerCut);
   const price = discountedPriceNum || originalPriceNum;
 
   const isFinished = Boolean(record.endTime);
@@ -50,6 +63,8 @@ function recordToLegacy(record) {
     companyDiscount,
     discountPercent,
     price,
+    originalPrice: originalPriceNum,
+    washerCut: washerCutNum,
     boxNumber: record.boxNumber ?? 0,
     washerName: record.washerUsername,
     startTime: record.startTime,

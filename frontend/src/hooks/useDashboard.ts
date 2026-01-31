@@ -8,6 +8,8 @@ export type DashboardRecord = {
   companyDiscount?: string;
   serviceType: string;
   price: number;
+  originalPrice?: number;
+  washerCut?: number;
   boxNumber: number;
   washerName: string;
   startTime: string | Date;
