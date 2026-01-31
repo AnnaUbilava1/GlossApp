@@ -48,37 +48,34 @@ export default function RecordItem({
       </DataTable.Cell>
       <DataTable.Cell style={styles.actionsCell}>
         <View style={styles.actionsContainer}>
-          {!record.isFinished && (
-            <Button
-              mode="contained"
-              compact
-              onPress={onFinish}
-              style={styles.finishButton}
-              labelStyle={styles.finishButtonLabel}
-            >
-              Finish
-            </Button>
-          )}
-          {record.isFinished && (
-            record.isPaid ? (
-              <Button mode="contained" compact style={styles.paymentButtonPaid} labelStyle={styles.paymentButtonLabel} disabled>
-                Paid
-              </Button>
-            ) : isAdmin ? (
+          {/* Show buttons only if not both finished and paid */}
+          {!(record.isFinished && record.isPaid) && (
+            <>
+              {/* Finish button - visible to all users */}
               <Button
                 mode="contained"
                 compact
-                onPress={onPayment}
-                style={styles.paymentButtonUnpaid}
-                labelStyle={styles.paymentButtonLabel}
+                onPress={onFinish}
+                style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
+                labelStyle={styles.finishButtonLabel}
+                disabled={record.isFinished}
               >
-                Unpaid
+                {record.isFinished ? "Finished" : "Finish"}
               </Button>
-            ) : (
-              <Button mode="contained" compact style={styles.paymentButtonUnpaid} labelStyle={styles.paymentButtonLabel} disabled>
-                Unpaid
-              </Button>
-            )
+              {/* Pay button - visible only to admin */}
+              {isAdmin && (
+                <Button
+                  mode="contained"
+                  compact
+                  onPress={onPayment}
+                  style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
+                  labelStyle={styles.paymentButtonLabel}
+                  disabled={record.isPaid}
+                >
+                  {record.isPaid ? "Paid" : "Pay"}
+                </Button>
+              )}
+            </>
           )}
           {isAdmin && (
             <>
@@ -128,14 +125,17 @@ const styles = StyleSheet.create({
   finishButton: {
     backgroundColor: "#FF9800",
   },
+  finishButtonDone: {
+    backgroundColor: "#4CAF50",
+  },
   finishButtonLabel: {
     fontSize: 12,
   },
   paymentButtonUnpaid: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: "#D32F2F", // Red when unpaid
   },
   paymentButtonPaid: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#2E7D32", // Green when paid
   },
   paymentButtonLabel: {
     fontSize: 12,

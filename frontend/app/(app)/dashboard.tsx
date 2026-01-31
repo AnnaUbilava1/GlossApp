@@ -269,34 +269,32 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                     <View style={styles.mobileActions}>
-                      {!record.isFinished && (
-                        <Button
-                          mode="contained"
-                          compact
-                          onPress={() => handleFinish(record.id)}
-                        >
-                          Finish
-                        </Button>
-                      )}
-                      {record.isFinished && (
-                        record.isPaid ? (
-                          <Button mode="contained" compact style={styles.paymentButtonPaid} disabled>
-                            Paid
-                          </Button>
-                        ) : auth.user?.role === "admin" ? (
+                      {/* Show buttons only if not both finished and paid */}
+                      {!(record.isFinished && record.isPaid) && (
+                        <>
+                          {/* Finish button - visible to all users */}
                           <Button
                             mode="contained"
                             compact
-                            onPress={() => handlePayment(record.id)}
-                            style={styles.paymentButtonUnpaid}
+                            onPress={() => handleFinish(record.id)}
+                            style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
+                            disabled={record.isFinished}
                           >
-                            Unpaid
+                            {record.isFinished ? "Finished" : "Finish"}
                           </Button>
-                        ) : (
-                          <Button mode="contained" compact style={styles.paymentButtonUnpaid} disabled>
-                            Unpaid
-                          </Button>
-                        )
+                          {/* Pay button - visible only to admin */}
+                          {auth.user?.role === "admin" && (
+                            <Button
+                              mode="contained"
+                              compact
+                              onPress={() => handlePayment(record.id)}
+                              style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
+                              disabled={record.isPaid}
+                            >
+                              {record.isPaid ? "Paid" : "Pay"}
+                            </Button>
+                          )}
+                        </>
                       )}
                       {auth.user?.role === "admin" && (
                         <>
@@ -448,14 +446,17 @@ const styles = StyleSheet.create({
   finishButton: {
     backgroundColor: "#FF9800",
   },
+  finishButtonDone: {
+    backgroundColor: "#4CAF50",
+  },
   finishButtonLabel: {
     fontSize: 12,
   },
   paymentButtonUnpaid: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: "#D32F2F", // Red when unpaid
   },
   paymentButtonPaid: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#2E7D32", // Green when paid
   },
   paymentButtonLabel: {
     fontSize: 12,
