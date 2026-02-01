@@ -70,8 +70,7 @@ export default function DashboardScreen() {
         token: auth.token,
         method: "POST",
       });
-      // Refresh by nudging date state (triggering useDashboard effect)
-      setStartDate((d) => d);
+      refresh();
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Failed to finish record. Please try again.";
@@ -93,7 +92,8 @@ export default function DashboardScreen() {
         body: JSON.stringify({ paymentMethod }),
       });
       setActionSuccess(`Record marked as paid (${paymentMethod})`);
-      setStartDate((d) => d);
+      setRecordToPay(null);
+      refresh();
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Failed to mark record as paid. Please try again.";
@@ -150,8 +150,7 @@ export default function DashboardScreen() {
       setActionSuccess("Record deleted successfully");
       setMasterPinForAction(null);
       setRecordToDelete(null);
-      // Refresh by nudging date state
-      setStartDate((d) => d);
+      refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to delete record. Please try again.";
       setActionError(msg);
