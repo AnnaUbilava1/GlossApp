@@ -111,23 +111,21 @@ export default function DashboardScreen() {
     setMasterPinForAction("");
   };
 
-  const handleEditConfirm = async () => {
-    if (!auth.token || !recordToEdit || !masterPinForAction) {
-      return;
-    }
+  const handleEditConfirm = async (pin: string) => {
+    if (!auth.token || !recordToEdit) return;
+    const trimmed = (pin ?? masterPinForAction ?? "").trim();
+    if (!trimmed) return;
 
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+    if (trimmed !== MASTER_PIN) {
       setActionError("Incorrect PIN");
       setMasterPinForAction(null);
       setRecordToEdit(null);
       return;
     }
 
-    // TODO: Navigate to edit screen or open edit modal
-    // For now, just show success message
-    setActionSuccess("Edit functionality coming soon");
     setMasterPinForAction(null);
     setRecordToEdit(null);
+    router.push(`/(app)/edit-record/${recordToEdit}` as import("expo-router").Href);
   };
 
   const handleDeleteConfirm = async () => {
@@ -348,10 +346,7 @@ export default function DashboardScreen() {
           setRecordToEdit(null);
           setMasterPinForAction(null);
         }}
-        onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleEditConfirm();
-        }}
+        onCorrectPin={(pin) => handleEditConfirm(pin)}
         title="Edit Record"
         description="Enter Master PIN to edit this record"
       />
