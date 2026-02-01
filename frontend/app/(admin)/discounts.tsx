@@ -20,6 +20,7 @@ import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
 import MasterPinModal from "../../src/components/MasterPinModal";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import {
   getAllDiscounts,
   updateDiscount,
@@ -34,6 +35,7 @@ const isTablet = width >= 768;
 export default function DiscountsScreen() {
   const theme = useTheme();
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("discounts");
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export default function DiscountsScreen() {
         const allDiscounts = await getAllDiscounts(token);
         setDiscounts(allDiscounts);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load discounts");
+        setError(err instanceof Error ? err.message : t("admin.discounts.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -68,7 +70,7 @@ export default function DiscountsScreen() {
       const allDiscounts = await getAllDiscounts(token);
       setDiscounts(allDiscounts);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to refresh discounts");
+      setError(err instanceof Error ? err.message : t("admin.discounts.loadFailed"));
     }
   };
 
@@ -90,22 +92,22 @@ export default function DiscountsScreen() {
 
   const handleToggleActive = async (discount: Discount) => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
     // Physical person discounts cannot be modified
     if (discount.id.startsWith("physical-")) {
-      setError("Physical person discounts cannot be modified");
+      setError(t("admin.discounts.physicalCannotModify"));
       return;
     }
 
     try {
       await updateDiscount(token, discount.id, { active: !discount.active });
-      setSuccessMessage(discount.active ? "Discount deactivated" : "Discount activated");
+      setSuccessMessage(discount.active ? t("admin.discounts.deactivated") : t("admin.discounts.activated"));
       await refreshDiscounts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update discount");
+      setError(err instanceof Error ? err.message : t("admin.discounts.updateFailed"));
     }
   };
 
@@ -120,7 +122,7 @@ export default function DiscountsScreen() {
     }
 
     if (masterPinForAction.trim() !== MASTER_PIN) {
-      setError("Incorrect PIN");
+      setError(t("admin.incorrectPin"));
       setMasterPinForAction(null);
       setDiscountToDelete(null);
       return;
@@ -128,12 +130,12 @@ export default function DiscountsScreen() {
 
     try {
       await deleteDiscount(token, discountToDelete, masterPinForAction.trim());
-      setSuccessMessage("Discount deleted successfully");
+      setSuccessMessage(t("admin.discounts.deleteSuccess"));
       setMasterPinForAction(null);
       setDiscountToDelete(null);
       await refreshDiscounts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete discount");
+      setError(err instanceof Error ? err.message : t("admin.discounts.deleteFailed"));
       setMasterPinForAction(null);
       setDiscountToDelete(null);
     }
@@ -151,12 +153,12 @@ export default function DiscountsScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -164,22 +166,22 @@ export default function DiscountsScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Discount Management
+              {t("admin.discounts.title")}
             </Text>
           </View>
 
           <Text variant="bodyMedium" style={styles.subtitle}>
-            Company discounts are managed through the Companies screen. Physical person discounts are system defaults.
+            {t("admin.discounts.subtitle")}
           </Text>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text variant="bodyLarge">Loading discounts...</Text>
+              <Text variant="bodyLarge">{t("admin.discounts.loading")}</Text>
             </View>
           ) : discounts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text variant="bodyLarge" style={styles.emptyText}>
-                No discounts found
+                {t("admin.discounts.noDiscounts")}
               </Text>
             </View>
           ) : (
@@ -203,18 +205,18 @@ export default function DiscountsScreen() {
                           </Text>
                           {!discount.active && (
                             <Chip mode="outlined" compact style={styles.inactiveChip}>
-                              Inactive
+                              {t("admin.discounts.inactive")}
                             </Chip>
                           )}
                           {isPhysical && (
                             <Chip mode="outlined" compact style={styles.systemChip}>
-                              System
+                              {t("admin.discounts.system")}
                             </Chip>
                           )}
                         </View>
                         {!isPhysical && discount.companyId && (
                           <Text variant="bodySmall" style={styles.companyId}>
-                            Company ID: {discount.companyId}
+                            {t("admin.discounts.companyId")}: {discount.companyId}
                           </Text>
                         )}
                       </View>
@@ -231,7 +233,7 @@ export default function DiscountsScreen() {
                           style={styles.toggleButton}
                           compact
                         >
-                          {discount.active ? "Deactivate" : "Activate"}
+                          {discount.active ? t("admin.discounts.deactivate") : t("admin.discounts.activate")}
                         </Button>
                         <IconButton
                           icon="delete"
@@ -259,8 +261,8 @@ export default function DiscountsScreen() {
           setMasterPinForAction(pin);
           handleDeleteConfirm();
         }}
-        title="Delete Discount"
-        description="Enter Master PIN to confirm deletion. Discounts with wash records cannot be deleted."
+        title={t("admin.discounts.deleteTitle")}
+        description={t("admin.discounts.deleteDescription")}
       />
 
       <Snackbar

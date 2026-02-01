@@ -24,6 +24,7 @@ import AppHeader from "../../src/components/AppHeader";
 import LicenseAutocomplete from "../../src/components/LicenseAutocomplete";
 import TabNavigation from "../../src/components/TabNavigation";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
 import { CAR_TYPES, formatMoney, SERVICE_TYPES } from "../../src/utils/constants";
@@ -34,6 +35,7 @@ const isTablet = width >= 768;
 export default function NewRecordScreen() {
   const theme = useTheme();
   const auth = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("new-record");
   
   // Get record count for tab display
@@ -208,24 +210,23 @@ export default function NewRecordScreen() {
     setError(null);
 
     const boxNum = boxNumber ? Number(boxNumber) : 0;
-    if (!licensePlate.trim()) return setError("License plate is required");
-    if (!carType) return setError("Car category is required");
-    // For custom services, check customServiceName; for regular services, check serviceType
+    if (!licensePlate.trim()) return setError(t("newRecord.error.licenseRequired"));
+    if (!carType) return setError(t("newRecord.error.carCategoryRequired"));
     if (isCustomService) {
-      if (!customServiceName.trim()) return setError("Custom service name is required");
-      if (!manualPrice.trim()) return setError("Price is required for custom service");
+      if (!customServiceName.trim()) return setError(t("newRecord.error.customNameRequired"));
+      if (!manualPrice.trim()) return setError(t("newRecord.error.priceRequired"));
     } else {
-      if (!serviceType) return setError("Wash type is required");
+      if (!serviceType) return setError(t("newRecord.error.washTypeRequired"));
     }
-    if (!selectedWasher) return setError("Washer is required");
-    if (!selectedDiscount) return setError("Company + discount is required");
+    if (!selectedWasher) return setError(t("newRecord.error.washerRequired"));
+    if (!selectedDiscount) return setError(t("newRecord.error.companyDiscountRequired"));
     if (!Number.isInteger(boxNum) || boxNum < 0) return setError("Box number must be an integer >= 0");
 
     // Validate manual price if custom service
     if (isCustomService) {
       const price = parseFloat(manualPrice);
       if (isNaN(price) || price <= 0) {
-        return setError("Price must be a positive number");
+        return setError(t("newRecord.error.pricePositive"));
       }
     }
 
@@ -244,11 +245,11 @@ export default function NewRecordScreen() {
       // If custom service, always include manual price (required for backend to detect custom service)
       if (isCustomService) {
         if (!manualPrice || manualPrice.trim() === "") {
-          return setError("Price is required for custom services");
+          return setError(t("newRecord.error.priceRequired"));
         }
         const price = parseFloat(manualPrice);
         if (isNaN(price) || price < 0) {
-          return setError("Price must be a valid number");
+          return setError(t("newRecord.error.priceValid"));
         }
         requestBody.price = price;
       }
@@ -260,7 +261,7 @@ export default function NewRecordScreen() {
       });
       router.push("/(app)/dashboard");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create record");
+      setError(e instanceof Error ? e.message : t("newRecord.error.createFailed"));
     } finally {
       setSubmitLoading(false);
     }
@@ -303,7 +304,7 @@ export default function NewRecordScreen() {
         >
           <TextInput
             mode="outlined"
-            placeholder={`Select ${label.toLowerCase()}`}
+            placeholder={`${t("newRecord.selectPlaceholder")} ${label}`}
             value={valueText}
             editable={false}
             style={styles.input}
@@ -322,11 +323,11 @@ export default function NewRecordScreen() {
             contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.surface }]}
           >
             <Text variant="titleMedium" style={{ marginBottom: 12 }}>
-              Select {label}
+              {t("newRecord.selectPlaceholder")} {label}
             </Text>
             <TextInput
               mode="outlined"
-              placeholder="Search..."
+              placeholder={t("newRecord.searchPlaceholder")}
               value={query}
               onChangeText={setQuery}
               style={styles.input}
@@ -347,7 +348,7 @@ export default function NewRecordScreen() {
               ))}
               {filtered.length === 0 && (
                 <Text variant="bodyMedium" style={{ color: "#757575", padding: 12 }}>
-                  No results
+                  {t("newRecord.noResults")}
                 </Text>
               )}
             </ScrollView>
@@ -401,10 +402,10 @@ export default function NewRecordScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            <TabNavigation
+            <            TabNavigation
               tabs={[
-                { key: "new-record", label: "New Record" },
-                { key: "all-records", label: "All Records", count: records.length },
+                { key: "new-record", label: t("tabs.newRecord") },
+                { key: "all-records", label: t("tabs.allRecords"), count: records.length },
               ]}
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -412,7 +413,7 @@ export default function NewRecordScreen() {
 
             <View style={styles.formHeader}>
               <Text variant="titleLarge" style={styles.formTitle}>
-                + Add New Car Wash Record
+                {t("newRecord.title")}
               </Text>
             </View>
 
@@ -428,6 +429,7 @@ export default function NewRecordScreen() {
                 {/* Left Column */}
                 <View style={styles.column}>
                   <LicenseAutocomplete
+                    label={t("newRecord.licensePlate")}
                     value={licensePlate}
                     onChange={setLicensePlate}
                     token={auth.token!}
@@ -441,7 +443,7 @@ export default function NewRecordScreen() {
                   />
 
                   <SearchableSelect
-                    label="Company & Discount"
+                    label={t("newRecord.companyDiscount")}
                     required
                     disabled={loadingInit}
                     valueText={selectedDiscount?.label || ""}
@@ -458,7 +460,7 @@ export default function NewRecordScreen() {
                   />
 
                   {renderInput(
-                    "Discount Percent",
+                    t("newRecord.discountPercent"),
                     selectedDiscount ? `${selectedDiscount.discountPercent}%` : "—",
                     () => {},
                     undefined,
@@ -467,8 +469,8 @@ export default function NewRecordScreen() {
                   )}
 
                   {renderInput(
-                    "Original Price",
-                    loadingQuote ? "Calculating..." : formatMoney(originalPrice),
+                    t("newRecord.originalPrice"),
+                    loadingQuote ? t("newRecord.calculating") : formatMoney(originalPrice),
                     () => {},
                     undefined,
                     false,
@@ -476,8 +478,8 @@ export default function NewRecordScreen() {
                   )}
 
                   {renderInput(
-                    "Discounted Price",
-                    loadingQuote ? "Calculating..." : formatMoney(discountedPrice),
+                    t("newRecord.discountedPrice"),
+                    loadingQuote ? t("newRecord.calculating") : formatMoney(discountedPrice),
                     () => {},
                     undefined,
                     false,
@@ -485,8 +487,8 @@ export default function NewRecordScreen() {
                   )}
 
                   {renderInput(
-                    "Washer Cut",
-                    loadingQuote ? "Calculating..." : formatMoney(washerCut),
+                    t("newRecord.washerCut"),
+                    loadingQuote ? t("newRecord.calculating") : formatMoney(washerCut),
                     () => {},
                     undefined,
                     false,
@@ -497,7 +499,7 @@ export default function NewRecordScreen() {
                 {/* Right Column */}
                 <View style={styles.column}>
                   <SearchableSelect
-                    label="Car Category"
+                    label={t("newRecord.carCategory")}
                     required
                     valueText={carType}
                     options={[...CAR_TYPES].map((c) => ({ key: c, label: c }))}
@@ -505,12 +507,12 @@ export default function NewRecordScreen() {
                   />
 
                   <SearchableSelect
-                    label="Wash Type"
+                    label={t("newRecord.washType")}
                     required
-                    valueText={isCustomService ? "Custom Service" : serviceType}
+                    valueText={isCustomService ? t("newRecord.customService") : serviceType}
                     options={[
                       ...SERVICE_TYPES.map((s) => ({ key: s, label: s })),
-                      { key: "__CUSTOM__", label: "Custom Service" },
+                      { key: "__CUSTOM__", label: t("newRecord.customService") },
                     ]}
                     onSelect={(key) => {
                       if (key === "__CUSTOM__") {
@@ -533,15 +535,15 @@ export default function NewRecordScreen() {
                   {isCustomService && (
                     <>
                       {renderInput(
-                        "Custom Service Name",
+                        t("newRecord.customServiceName"),
                         customServiceName,
                         setCustomServiceName,
-                        "e.g., Special Detail, Wax, etc.",
+                        t("newRecord.customServicePlaceholder"),
                         true,
                         false
                       )}
                       {renderInput(
-                        "Price (Manual Entry)",
+                        t("newRecord.priceManual"),
                         manualPrice,
                         setManualPrice,
                         "0.00",
@@ -552,7 +554,7 @@ export default function NewRecordScreen() {
                   )}
 
                   <SearchableSelect
-                    label="Washer Username"
+                    label={t("newRecord.washerUsername")}
                     required
                     disabled={loadingInit}
                     valueText={selectedWasher ? selectedWasher.username : ""}
@@ -565,7 +567,7 @@ export default function NewRecordScreen() {
                   />
 
                   {renderInput(
-                    "Box Number",
+                    t("newRecord.boxNumber"),
                     boxNumber,
                     setBoxNumber,
                     "1",
@@ -585,7 +587,7 @@ export default function NewRecordScreen() {
                 loading={submitLoading}
                 disabled={submitLoading || loadingInit}
               >
-                Add Record
+                {t("newRecord.addRecord")}
               </Button>
             </View>
           </View>

@@ -18,6 +18,7 @@ import PaymentMethodModal from "../../src/components/PaymentMethodModal";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
+import { useLanguage } from "../../src/context/LanguageContext";
 import { formatMoney, getStatusColor, MASTER_PIN } from "../../src/utils/constants";
 import { formatDateTime } from "../../src/utils/dateFormat";
 
@@ -27,6 +28,7 @@ const isTablet = width >= 768;
 export default function DashboardScreen() {
   const theme = useTheme();
   const auth = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = React.useState("all-records");
   const {
     records,
@@ -72,7 +74,7 @@ export default function DashboardScreen() {
       refresh();
     } catch (e) {
       const msg =
-        e instanceof Error ? e.message : "Failed to finish record. Please try again.";
+        e instanceof Error ? e.message : t("records.finishFailed");
       setActionError(msg);
     }
   };
@@ -90,12 +92,12 @@ export default function DashboardScreen() {
         method: "POST",
         body: JSON.stringify({ paymentMethod }),
       });
-      setActionSuccess(`Record marked as paid (${paymentMethod})`);
+      setActionSuccess(t("records.paidSuccess"));
       setRecordToPay(null);
       refresh();
     } catch (e) {
       const msg =
-        e instanceof Error ? e.message : "Failed to mark record as paid. Please try again.";
+        e instanceof Error ? e.message : t("records.payFailed");
       setActionError(msg);
     }
   };
@@ -146,12 +148,12 @@ export default function DashboardScreen() {
         method: "DELETE",
         body: JSON.stringify({ masterPin: masterPinForAction.trim() }),
       });
-      setActionSuccess("Record deleted successfully");
+      setActionSuccess(t("records.deletedSuccess"));
       setMasterPinForAction(null);
       setRecordToDelete(null);
       refresh();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to delete record. Please try again.";
+      const msg = e instanceof Error ? e.message : t("records.deleteFailed");
       setActionError(msg);
       setMasterPinForAction(null);
       setRecordToDelete(null);
@@ -184,8 +186,8 @@ export default function DashboardScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <TabNavigation
             tabs={[
-              { key: "new-record", label: "New Record" },
-              { key: "all-records", label: "All Records", count: records.length },
+              { key: "new-record", label: t("tabs.newRecord") },
+              { key: "all-records", label: t("tabs.allRecords"), count: records.length },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -206,7 +208,7 @@ export default function DashboardScreen() {
           <View style={styles.dateFilterRow}>
             <View style={styles.dateField}>
               <Text variant="labelSmall" style={styles.dateLabel}>
-                Start Date (YYYY-MM-DD)
+                {t("records.startDate")}
               </Text>
               <TextInput
                 mode="outlined"
@@ -217,7 +219,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.dateField}>
               <Text variant="labelSmall" style={styles.dateLabel}>
-                End Date (YYYY-MM-DD)
+                {t("records.endDate")}
               </Text>
               <TextInput
                 mode="outlined"
@@ -231,18 +233,18 @@ export default function DashboardScreen() {
           {isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>License Number</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>Car Type</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.companyCell]}>Company & Discount</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>Service</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Original Price</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Price</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>Washer Cut</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.boxCell]}>Box</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.washerCell]}>Washer</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>Start Time</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>End Time</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>Actions</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
+                <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
               </DataTable.Header>
 
               {records.map((record) => renderRecordRow(record))}
@@ -268,7 +270,7 @@ export default function DashboardScreen() {
                     <View style={styles.mobileCardBody}>
                       <Text variant="bodyMedium">{record.carType} • {record.serviceType}</Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
-                        Original: {formatMoney(record.originalPrice ?? 0)} • Washer Cut: {formatMoney(record.washerCut ?? 0)}
+                        {t("records.originalPrice")}: {formatMoney(record.originalPrice ?? 0)} • {t("records.washerCut")}: {formatMoney(record.washerCut ?? 0)}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
                         Box {record.boxNumber} • {record.washerName}
@@ -289,9 +291,8 @@ export default function DashboardScreen() {
                             style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
                             disabled={record.isFinished}
                           >
-                            {record.isFinished ? "Finished" : "Finish"}
+                            {record.isFinished ? t("records.finished") : t("records.finish")}
                           </Button>
-                          {/* Pay button - visible only to admin */}
                           {auth.user?.role === "admin" && (
                             <Button
                               mode="contained"
@@ -300,7 +301,7 @@ export default function DashboardScreen() {
                               style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
                               disabled={record.isPaid}
                             >
-                              {record.isPaid ? "Paid" : "Pay"}
+                              {record.isPaid ? t("records.paid") : t("records.pay")}
                             </Button>
                           )}
                         </>
@@ -345,8 +346,8 @@ export default function DashboardScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => handleEditConfirm(pin)}
-        title="Edit Record"
-        description="Enter Master PIN to edit this record"
+        title={t("records.editRecord")}
+        description={t("records.editRecordDescription")}
       />
 
       <MasterPinModal
@@ -359,8 +360,8 @@ export default function DashboardScreen() {
           setMasterPinForAction(pin);
           handleDeleteConfirm();
         }}
-        title="Delete Record"
-        description="Enter Master PIN to confirm deletion"
+        title={t("records.deleteRecord")}
+        description={t("records.deleteRecordDescription")}
       />
 
       <PaymentMethodModal
@@ -374,8 +375,8 @@ export default function DashboardScreen() {
             setRecordToPay(null);
           }
         }}
-        title="Select Payment Method"
-        description="Choose how the payment was made:"
+        title={t("records.selectPaymentMethod")}
+        description={t("records.choosePaymentMethod")}
       />
 
       <Snackbar

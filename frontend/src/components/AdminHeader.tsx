@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+import { useLanguage } from "../context/LanguageContext";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -20,6 +21,7 @@ export default function AdminHeader({
   onLogout,
 }: AdminHeaderProps) {
   const theme = useTheme();
+  const { t } = useLanguage();
   const userName = user?.name || "John Doe";
 
   const handleBack = () => {
@@ -46,10 +48,10 @@ export default function AdminHeader({
         </View>
         <View style={styles.titleContainer}>
           <Text variant="titleLarge" style={styles.title}>
-            Admin Panel
+            {t("admin.panelTitle")}
           </Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            {userName} • Administrator
+            {userName} • {t("admin.administrator")}
           </Text>
         </View>
       </View>
@@ -62,7 +64,7 @@ export default function AdminHeader({
           labelStyle={styles.buttonLabel}
           style={styles.backButton}
         >
-          Main
+          {t("admin.main")}
         </Button>
         <Button
           mode="text"
@@ -71,7 +73,7 @@ export default function AdminHeader({
           labelStyle={styles.buttonLabel}
           style={styles.logoutButton}
         >
-          Logout
+          {t("admin.logout")}
         </Button>
       </View>
     </View>

@@ -5,6 +5,7 @@ import type { DashboardRecord } from "../hooks/useDashboard";
 import { formatMoney, getStatusColor, getStatusLabel } from "../utils/constants";
 import { formatDateTime } from "../utils/dateFormat";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
 type Props = {
   record: DashboardRecord;
@@ -22,6 +23,7 @@ export default function RecordItem({
   onDelete,
 }: Props) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
   const bgColor = getStatusColor(record.isFinished, record.isPaid);
   const statusLabel = getStatusLabel(record.isFinished, record.isPaid);
@@ -67,9 +69,8 @@ export default function RecordItem({
                 labelStyle={styles.finishButtonLabel}
                 disabled={record.isFinished}
               >
-                {record.isFinished ? "Finished" : "Finish"}
+                {record.isFinished ? t("records.finished") : t("records.finish")}
               </Button>
-              {/* Pay button - visible only to admin */}
               {isAdmin && (
                 <Button
                   mode="contained"
@@ -79,7 +80,7 @@ export default function RecordItem({
                   labelStyle={styles.paymentButtonLabel}
                   disabled={record.isPaid}
                 >
-                  {record.isPaid ? "Paid" : "Pay"}
+                  {record.isPaid ? t("records.paid") : t("records.pay")}
                 </Button>
               )}
             </>

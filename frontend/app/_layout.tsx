@@ -4,6 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../src/context/AuthContext";
+import { LanguageProvider } from "../src/context/LanguageContext";
 import { lightTheme } from "../src/utils/theme";
 import { useProtectedRoute } from "../src/hooks/useProtectedRoute";
 
@@ -58,9 +59,11 @@ export default function RootLayout() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <PaperProvider theme={lightTheme}>
-          <AuthProvider>
-            <RootNavigation />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <RootNavigation />
+            </AuthProvider>
+          </LanguageProvider>
         </PaperProvider>
       </SafeAreaProvider>
     </ErrorBoundary>

@@ -20,6 +20,7 @@ import AdminTabs from "../../src/components/AdminTabs";
 import WasherFormModal from "../../src/components/WasherFormModal";
 import MasterPinModal from "../../src/components/MasterPinModal";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import {
   getAllWashers,
   createWasher,
@@ -37,6 +38,7 @@ const isTablet = width >= 768;
 export default function WashersScreen() {
   const theme = useTheme();
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("washers");
   const [washers, setWashers] = useState<Washer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function WashersScreen() {
         const allWashers = await getAllWashers(token, true); // Admin sees all
         setWashers(allWashers);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load washers");
+        setError(err instanceof Error ? err.message : t("admin.washers.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -73,7 +75,7 @@ export default function WashersScreen() {
       const allWashers = await getAllWashers(token, true);
       setWashers(allWashers);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to refresh washers");
+      setError(err instanceof Error ? err.message : t("admin.washers.loadFailed"));
     }
   };
 
@@ -95,7 +97,7 @@ export default function WashersScreen() {
 
   const handleAddWasher = async (payload: CreateWasherPayload | UpdateWasherPayload) => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -110,11 +112,11 @@ export default function WashersScreen() {
       };
 
       if (!createPayload.username) {
-        throw new Error("Username is required");
+        throw new Error(t("admin.washers.usernameRequired"));
       }
 
       await createWasher(token, createPayload);
-      setSuccessMessage("Washer added successfully");
+      setSuccessMessage(t("admin.washers.addSuccess"));
       await refreshWashers();
     } catch (err) {
       throw err; // Re-throw to let modal handle it
@@ -123,7 +125,7 @@ export default function WashersScreen() {
 
   const handleEditWasher = async (payload: CreateWasherPayload | UpdateWasherPayload) => {
     if (!token || !editingWasher) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -136,7 +138,7 @@ export default function WashersScreen() {
         salaryPercentage: (payload as CreateWasherPayload).salaryPercentage || (payload as UpdateWasherPayload).salaryPercentage,
       };
       await updateWasher(token, editingWasher.id, updatePayload);
-      setSuccessMessage("Washer updated successfully");
+      setSuccessMessage(t("admin.washers.updateSuccess"));
       setEditingWasher(null);
       await refreshWashers();
     } catch (err) {
@@ -146,16 +148,16 @@ export default function WashersScreen() {
 
   const handleDeactivate = async (washer: Washer) => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
     try {
       await updateWasher(token, washer.id, { active: !washer.active });
-      setSuccessMessage(washer.active ? "Washer deactivated" : "Washer activated");
+      setSuccessMessage(washer.active ? t("admin.washers.deactivated") : t("admin.washers.activated"));
       await refreshWashers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update washer");
+      setError(err instanceof Error ? err.message : t("admin.washers.updateFailed"));
     }
   };
 
@@ -170,7 +172,7 @@ export default function WashersScreen() {
     }
 
     if (masterPinForAction.trim() !== MASTER_PIN) {
-      setError("Incorrect PIN");
+      setError(t("admin.incorrectPin"));
       setMasterPinForAction(null);
       setWasherToDelete(null);
       return;
@@ -178,12 +180,12 @@ export default function WashersScreen() {
 
     try {
       await deleteWasher(token, washerToDelete, masterPinForAction.trim());
-      setSuccessMessage("Washer deleted successfully");
+      setSuccessMessage(t("admin.washers.deleteSuccess"));
       setMasterPinForAction(null);
       setWasherToDelete(null);
       await refreshWashers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete washer");
+      setError(err instanceof Error ? err.message : t("admin.washers.deleteFailed"));
       setMasterPinForAction(null);
       setWasherToDelete(null);
     }
@@ -202,12 +204,12 @@ export default function WashersScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -215,7 +217,7 @@ export default function WashersScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Washer Management
+              {t("admin.washers.pageTitle")}
             </Text>
             <Button
               mode="contained"
@@ -227,19 +229,19 @@ export default function WashersScreen() {
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
-              Add Washer
+              {t("admin.washers.addWasher")}
             </Button>
           </View>
 
           {/* Washers List */}
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text variant="bodyLarge">Loading washers...</Text>
+              <Text variant="bodyLarge">{t("admin.washers.loading")}</Text>
             </View>
           ) : washers.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text variant="bodyLarge" style={styles.emptyText}>
-                No washers found
+                {t("admin.washers.noWashers")}
               </Text>
             </View>
           ) : (
@@ -259,7 +261,7 @@ export default function WashersScreen() {
                       </Text>
                       {!washer.active && (
                         <Chip mode="outlined" compact style={styles.inactiveChip}>
-                          Inactive
+                          {t("admin.washers.inactive")}
                         </Chip>
                       )}
                     </View>
@@ -319,8 +321,8 @@ export default function WashersScreen() {
           setMasterPinForAction(pin);
           handleDeleteConfirm();
         }}
-        title="Delete Washer"
-        description="Enter Master PIN to confirm deletion"
+        title={t("admin.washers.deleteTitle")}
+        description={t("admin.washers.deleteDescription")}
       />
 
       <Snackbar

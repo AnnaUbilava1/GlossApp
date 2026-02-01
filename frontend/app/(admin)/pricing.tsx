@@ -19,6 +19,7 @@ import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
 import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import { getPricingMatrix, updatePricingMatrix, type PricingMatrix } from "../../src/services/pricingService";
 
 const { width } = Dimensions.get("window");
@@ -36,6 +37,7 @@ CAR_TYPES.forEach((carType) => {
 export default function PricingScreen() {
   const theme = useTheme();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("pricing");
   const [pricing, setPricing] = useState<PricingMatrix>(initialPricing);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,7 @@ export default function PricingScreen() {
         
         setPricing(mergedPricing);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load pricing");
+        setError(err instanceof Error ? err.message : t("admin.pricing.saveFailed"));
       } finally {
         setLoading(false);
       }
@@ -135,7 +137,7 @@ export default function PricingScreen() {
 
   const handleSave = async () => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -151,7 +153,7 @@ export default function PricingScreen() {
       console.log("Saving pricing matrix:", pricing);
       await updatePricingMatrix(token, pricing);
       console.log("Pricing matrix saved successfully");
-      setSuccessMessage("Pricing matrix saved successfully");
+      setSuccessMessage(t("admin.pricing.saveSuccess"));
       // Refresh the pricing data after save
       const matrix = await getPricingMatrix(token);
       const mergedPricing: PricingMatrix = { ...initialPricing };
@@ -165,7 +167,7 @@ export default function PricingScreen() {
       setPricing(mergedPricing);
     } catch (err) {
       console.error("Error saving pricing:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to save pricing";
+      const errorMessage = err instanceof Error ? err.message : t("admin.pricing.saveFailed");
       setError(errorMessage);
     } finally {
       setSaving(false);
@@ -180,12 +182,12 @@ export default function PricingScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -193,7 +195,7 @@ export default function PricingScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Service Pricing Matrix
+              {t("admin.pricing.pageTitle")}
             </Text>
             <Button
               mode="contained"
@@ -203,17 +205,17 @@ export default function PricingScreen() {
               loading={saving}
               disabled={saving || loading}
             >
-              Save All
+              {t("admin.pricing.saveAll")}
             </Button>
           </View>
 
           <Text variant="bodyMedium" style={styles.subtitle}>
-            Set base prices for each Car Type + Service Type combination
+            {t("admin.pricing.setPricesSubtitle")}
           </Text>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text variant="bodyLarge">Loading pricing matrix...</Text>
+              <Text variant="bodyLarge">{t("admin.pricing.loading")}</Text>
             </View>
           ) : (
             <>

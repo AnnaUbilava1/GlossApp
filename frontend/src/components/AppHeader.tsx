@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+import { useLanguage } from "../context/LanguageContext";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -21,6 +22,7 @@ export default function AppHeader({
   onLogout,
 }: AppHeaderProps) {
   const theme = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const userName = user?.name || "John Doe";
   const userRole = user?.role || "staff";
 
@@ -40,7 +42,7 @@ export default function AppHeader({
         </View>
         <View style={styles.titleContainer}>
           <Text variant="titleLarge" style={styles.title}>
-            Car Wash Manager
+            {t("header.appName")}
           </Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
             {userName} • {userRole}
@@ -49,6 +51,24 @@ export default function AppHeader({
       </View>
 
       <View style={styles.rightSection}>
+        <View style={styles.langRow}>
+          <Button
+            mode={language === "ka" ? "contained-tonal" : "text"}
+            compact
+            onPress={() => setLanguage("ka")}
+            labelStyle={styles.langLabel}
+          >
+            ქართ
+          </Button>
+          <Button
+            mode={language === "en" ? "contained-tonal" : "text"}
+            compact
+            onPress={() => setLanguage("en")}
+            labelStyle={styles.langLabel}
+          >
+            EN
+          </Button>
+        </View>
         {showAdminButton && (
           <Button
             mode="text"
@@ -57,7 +77,7 @@ export default function AppHeader({
             labelStyle={styles.buttonLabel}
             style={styles.adminButton}
           >
-            Admin
+            {t("header.admin")}
           </Button>
         )}
         <Button
@@ -67,7 +87,7 @@ export default function AppHeader({
           labelStyle={styles.buttonLabel}
           style={styles.logoutButton}
         >
-          Logout
+          {t("header.logout")}
         </Button>
       </View>
     </View>
@@ -117,6 +137,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  langRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  langLabel: {
+    fontSize: 12,
   },
   adminButton: {
     marginRight: 4,

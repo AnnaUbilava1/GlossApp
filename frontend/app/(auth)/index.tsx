@@ -11,6 +11,7 @@ import {
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -18,6 +19,7 @@ const isTablet = width >= 768;
 export default function LoginScreen() {
   const theme = useTheme();
   const auth = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +38,7 @@ export default function LoginScreen() {
         router.replace("/(app)");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      setError(e instanceof Error ? e.message : t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -60,23 +62,43 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            {/* Language switcher */}
+            <View style={styles.languageRow}>
+              <Button
+                mode={language === "ka" ? "contained" : "outlined"}
+                compact
+                onPress={() => setLanguage("en")}
+                style={styles.langButton}
+              >
+                ქართული
+              </Button>
+              <Button
+                mode={language === "ka" ? "contained" : "outlined"}
+                compact
+                onPress={() => setLanguage("en")}
+                style={styles.langButton}
+              >
+                English
+              </Button>
+            </View>
+
             {/* Welcome Text */}
             <Text variant="headlineMedium" style={styles.welcomeText}>
-              Welcome Back
+              {t("auth.welcome")}
             </Text>
             <Text variant="bodyMedium" style={styles.subtitleText}>
-              Sign in to your car wash management account
+              {t("auth.subtitle")}
             </Text>
 
             {/* Form Fields */}
             <View style={styles.formContainer}>
               <View style={styles.inputContainer}>
                 <Text variant="labelMedium" style={styles.label}>
-                  Email
+                  {t("auth.email")}
                 </Text>
                 <TextInput
                   mode="outlined"
-                  placeholder="name@example.com"
+                  placeholder={t("auth.emailPlaceholder")}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -88,11 +110,11 @@ export default function LoginScreen() {
 
               <View style={styles.inputContainer}>
                 <Text variant="labelMedium" style={styles.label}>
-                  Password
+                  {t("auth.password")}
                 </Text>
                 <TextInput
                   mode="outlined"
-                  placeholder="Enter your password"
+                  placeholder={t("auth.passwordPlaceholder")}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -117,7 +139,7 @@ export default function LoginScreen() {
                   labelStyle={styles.forgotPasswordText}
                   compact
                 >
-                  Forgot password?
+                  {t("auth.forgotPassword")}
                 </Button>
               </View>
 
@@ -131,7 +153,7 @@ export default function LoginScreen() {
                 loading={loading}
                 disabled={loading}
               >
-                Sign In
+                {t("auth.signIn")}
               </Button>
 
               {!!error && (
@@ -177,7 +199,16 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  languageRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  langButton: {
+    minWidth: 90,
   },
   logo: {
     width: 64,

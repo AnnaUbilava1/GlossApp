@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
+import { useLanguage } from "../context/LanguageContext";
 import { formatMoney } from "../utils/constants";
 
 type Props = {
@@ -16,11 +17,11 @@ export default function DashboardSummary({
   card,
   total,
 }: Props) {
+  const { t } = useLanguage();
   return (
     <View style={styles.footer}>
       <Text variant="bodyMedium" style={styles.footerText}>
-        Total Cash: {formatMoney(cash)} | Total Card: {formatMoney(card)} | Total
-        Revenue: {formatMoney(total)}
+        {t("summary.totalCash")}: {formatMoney(cash)} | {t("summary.totalCard")}: {formatMoney(card)} | {t("summary.totalRevenue")}: {formatMoney(total)}
       </Text>
     </View>
   );

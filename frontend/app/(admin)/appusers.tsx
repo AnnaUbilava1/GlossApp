@@ -23,6 +23,7 @@ import AdminTabs from "../../src/components/AdminTabs";
 import MasterPinModal from "../../src/components/MasterPinModal";
 import UserFormModal from "../../src/components/UserFormModal";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import type { User } from "../../src/utils/types";
 import {
   createUser,
@@ -37,6 +38,7 @@ const isTablet = width >= 768;
 export default function AppUsersScreen() {
   const theme = useTheme();
   const auth = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("appusers");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,7 @@ export default function AppUsersScreen() {
       setUsers(data);
     } catch (e) {
       const msg =
-        e instanceof Error ? e.message : "Failed to load users. Please try again.";
+        e instanceof Error ? e.message : t("admin.appUsers.loadFailed");
       setError(msg);
     } finally {
       setLoading(false);
@@ -119,12 +121,12 @@ export default function AppUsersScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -132,7 +134,7 @@ export default function AppUsersScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Staff User Management
+              {t("admin.appUsers.pageTitle")}
             </Text>
             <Button
               mode="contained"
@@ -141,7 +143,7 @@ export default function AppUsersScreen() {
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
-              Add User
+              {t("admin.appUsers.addUser")}
             </Button>
           </View>
 
@@ -150,14 +152,14 @@ export default function AppUsersScreen() {
           ) : null}
 
           {loading ? (
-            <Text>Loading users...</Text>
+            <Text>{t("admin.loading")}</Text>
           ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>Name</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Email</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Role</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.appUsers.name")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.appUsers.email")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.appUsers.role")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.actions")}</DataTable.Title>
               </DataTable.Header>
 
               {users.map((user) => (
@@ -173,7 +175,7 @@ export default function AppUsersScreen() {
                       ]}
                       textStyle={styles.chipText}
                     >
-                      {user.role === "admin" ? "Admin" : "Staff"}
+                      {user.role === "admin" ? t("admin.appUsers.admin") : t("admin.appUsers.staff")}
                     </Chip>
                   </DataTable.Cell>
                   <DataTable.Cell style={styles.actionsCell}>
@@ -209,7 +211,7 @@ export default function AppUsersScreen() {
                       ]}
                       textStyle={styles.chipText}
                     >
-                      {user.role === "admin" ? "Admin" : "Staff"}
+                      {user.role === "admin" ? t("admin.appUsers.admin") : t("admin.appUsers.staff")}
                     </Chip>
                   </View>
                   <Text variant="bodyMedium" style={styles.mobileEmail}>
@@ -222,7 +224,7 @@ export default function AppUsersScreen() {
                       onPress={() => handleResetPassword(user.id)}
                       style={styles.resetButton}
                     >
-                      Reset Password
+                      {t("admin.appUsers.resetPassword")}
                     </Button>
                     <IconButton
                       icon="delete"
@@ -256,7 +258,7 @@ export default function AppUsersScreen() {
                 const msg =
                   e instanceof Error
                     ? e.message
-                    : "Failed to create user. Please try again.";
+                    : t("admin.appUsers.createFailed");
                 setActionError(msg);
               } finally {
                 setActionLoading(false);
@@ -292,7 +294,7 @@ export default function AppUsersScreen() {
                     const msg =
                       e instanceof Error
                         ? e.message
-                        : "Failed to delete user. Please try again.";
+                        : t("admin.appUsers.deleteFailed");
                     setActionError(msg);
                   } finally {
                     setActionLoading(false);
@@ -312,10 +314,10 @@ export default function AppUsersScreen() {
                 }
               }}
             >
-              <Dialog.Title>Reset Password</Dialog.Title>
+              <Dialog.Title>{t("admin.appUsers.resetPassword")}</Dialog.Title>
               <Dialog.Content>
                 <TextInput
-                  label="New Password"
+                  label={t("admin.appUsers.newPassword")}
                   value={newPassword}
                   onChangeText={(text) => {
                     setNewPassword(text);
@@ -339,7 +341,7 @@ export default function AppUsersScreen() {
                   }}
                   disabled={actionLoading}
                 >
-                  Cancel
+                  {t("admin.appUsers.cancel")}
                 </Button>
                 <Button
                   mode="contained"
@@ -350,7 +352,7 @@ export default function AppUsersScreen() {
                     const trimmed = newPassword.trim();
                     if (!trimmed || trimmed.length < 6) {
                       setActionError(
-                        "Password must be at least 6 characters."
+                        t("admin.appUsers.passwordMinLength")
                       );
                       return;
                     }
@@ -373,7 +375,7 @@ export default function AppUsersScreen() {
                       const msg =
                         e instanceof Error
                           ? e.message
-                          : "Failed to reset password. Please try again.";
+                          : t("admin.appUsers.resetFailed");
                       setActionError(msg);
                     } finally {
                       setActionLoading(false);
@@ -382,7 +384,7 @@ export default function AppUsersScreen() {
                   loading={actionLoading}
                   disabled={actionLoading}
                 >
-                  Save
+                  {t("admin.appUsers.save")}
                 </Button>
               </Dialog.Actions>
             </Dialog>

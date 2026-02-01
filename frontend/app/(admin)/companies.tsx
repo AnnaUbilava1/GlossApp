@@ -21,6 +21,7 @@ import AdminTabs from "../../src/components/AdminTabs";
 import CompanyFormModal from "../../src/components/CompanyFormModal";
 import MasterPinModal from "../../src/components/MasterPinModal";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import {
   getAllCompanies,
   createCompany,
@@ -38,6 +39,7 @@ const isTablet = width >= 768;
 export default function CompaniesScreen() {
   const theme = useTheme();
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("companies");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function CompaniesScreen() {
         const allCompanies = await getAllCompanies(token);
         setCompanies(allCompanies);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load companies");
+        setError(err instanceof Error ? err.message : t("admin.companies.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -74,7 +76,7 @@ export default function CompaniesScreen() {
       const allCompanies = await getAllCompanies(token);
       setCompanies(allCompanies);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to refresh companies");
+      setError(err instanceof Error ? err.message : t("admin.companies.loadFailed"));
     }
   };
 
@@ -96,7 +98,7 @@ export default function CompaniesScreen() {
 
   const handleAddCompany = async (payload: CreateCompanyPayload | UpdateCompanyPayload) => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -108,7 +110,7 @@ export default function CompaniesScreen() {
         discountPercentages: (payload as CreateCompanyPayload).discountPercentages || (payload as UpdateCompanyPayload).discountPercentages,
       };
       await createCompany(token, createPayload);
-      setSuccessMessage("Company added successfully");
+      setSuccessMessage(t("admin.companies.addSuccess"));
       await refreshCompanies();
     } catch (err) {
       throw err; // Re-throw to let modal handle it
@@ -117,7 +119,7 @@ export default function CompaniesScreen() {
 
   const handleEditCompany = async (payload: CreateCompanyPayload | UpdateCompanyPayload) => {
     if (!token || !editingCompany) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -129,7 +131,7 @@ export default function CompaniesScreen() {
         discountPercentages: (payload as CreateCompanyPayload).discountPercentages || (payload as UpdateCompanyPayload).discountPercentages,
       };
       await updateCompany(token, editingCompany.id, updatePayload);
-      setSuccessMessage("Company updated successfully");
+      setSuccessMessage(t("admin.companies.updateSuccess"));
       setEditingCompany(null);
       await refreshCompanies();
     } catch (err) {
@@ -148,7 +150,7 @@ export default function CompaniesScreen() {
     }
 
     if (masterPinForAction.trim() !== MASTER_PIN) {
-      setError("Incorrect PIN");
+      setError(t("admin.incorrectPin"));
       setMasterPinForAction(null);
       setCompanyToDelete(null);
       return;
@@ -156,12 +158,12 @@ export default function CompaniesScreen() {
 
     try {
       await deleteCompany(token, companyToDelete, masterPinForAction.trim());
-      setSuccessMessage("Company deleted successfully");
+      setSuccessMessage(t("admin.companies.deleteSuccess"));
       setMasterPinForAction(null);
       setCompanyToDelete(null);
       await refreshCompanies();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete company");
+      setError(err instanceof Error ? err.message : t("admin.companies.deleteFailed"));
       setMasterPinForAction(null);
       setCompanyToDelete(null);
     }
@@ -175,12 +177,12 @@ export default function CompaniesScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -188,7 +190,7 @@ export default function CompaniesScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Partner Companies
+              {t("admin.companies.pageTitle")}
             </Text>
             <Button
               mode="contained"
@@ -200,27 +202,27 @@ export default function CompaniesScreen() {
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
-              Add Company
+              {t("admin.companies.addCompany")}
             </Button>
           </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text variant="bodyLarge">Loading companies...</Text>
+              <Text variant="bodyLarge">{t("admin.companies.loading")}</Text>
             </View>
           ) : companies.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text variant="bodyLarge" style={styles.emptyText}>
-                No companies found
+                {t("admin.companies.noCompanies")}
               </Text>
             </View>
           ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>Company Name</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Contact</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Discounts</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.companies.companyName")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.companies.contact")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.companies.discounts")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.actions")}</DataTable.Title>
               </DataTable.Header>
 
               {companies.map((company) => (
@@ -240,7 +242,7 @@ export default function CompaniesScreen() {
                       </View>
                     ) : (
                       <Text variant="bodySmall" style={styles.noDiscounts}>
-                        No discounts
+                        {t("admin.companies.noDiscounts")}
                       </Text>
                     )}
                   </DataTable.Cell>
@@ -287,7 +289,7 @@ export default function CompaniesScreen() {
                   </Text>
                   {company.discounts.length === 0 && (
                     <Text variant="bodySmall" style={styles.noDiscounts}>
-                      No discounts configured
+                      {t("admin.companies.noDiscountsConfigured")}
                     </Text>
                   )}
                   <View style={styles.mobileActions}>
@@ -340,8 +342,8 @@ export default function CompaniesScreen() {
           setMasterPinForAction(pin);
           handleDeleteConfirm();
         }}
-        title="Delete Company"
-        description="Enter Master PIN to confirm deletion"
+        title={t("admin.companies.deleteTitle")}
+        description={t("admin.companies.deleteDescription")}
       />
 
       <Snackbar

@@ -21,6 +21,7 @@ import AdminTabs from "../../src/components/AdminTabs";
 import VehicleFormModal from "../../src/components/VehicleFormModal";
 import MasterPinModal from "../../src/components/MasterPinModal";
 import { useAuth } from "../../src/context/AuthContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import {
   getAllVehicles,
   createVehicle,
@@ -38,6 +39,7 @@ const isTablet = width >= 768;
 export default function VehiclesScreen() {
   const theme = useTheme();
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("vehicles");
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function VehiclesScreen() {
         setVehicles(response.vehicles);
         setTotalPages(response.pagination.totalPages);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load vehicles");
+        setError(err instanceof Error ? err.message : t("admin.vehicles.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -79,7 +81,7 @@ export default function VehiclesScreen() {
       setVehicles(response.vehicles);
       setTotalPages(response.pagination.totalPages);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to refresh vehicles");
+      setError(err instanceof Error ? err.message : t("admin.vehicles.loadFailed"));
     }
   };
 
@@ -101,7 +103,7 @@ export default function VehiclesScreen() {
 
   const handleAddVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
     if (!token) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -111,7 +113,7 @@ export default function VehiclesScreen() {
         carType: (payload as CreateVehiclePayload).carType || (payload as UpdateVehiclePayload).carType || "Sedan",
       };
       await createVehicle(token, createPayload);
-      setSuccessMessage("Vehicle added successfully");
+      setSuccessMessage(t("admin.vehicles.addSuccess"));
       await refreshVehicles();
     } catch (err) {
       throw err; // Re-throw to let modal handle it
@@ -120,7 +122,7 @@ export default function VehiclesScreen() {
 
   const handleEditVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
     if (!token || !editingVehicle) {
-      setError("Not authenticated");
+      setError(t("admin.notAuthenticated"));
       return;
     }
 
@@ -130,7 +132,7 @@ export default function VehiclesScreen() {
         carType: (payload as CreateVehiclePayload).carType || (payload as UpdateVehiclePayload).carType,
       };
       await updateVehicle(token, editingVehicle.id, updatePayload);
-      setSuccessMessage("Vehicle updated successfully");
+      setSuccessMessage(t("admin.vehicles.updateSuccess"));
       setEditingVehicle(null);
       await refreshVehicles();
     } catch (err) {
@@ -149,7 +151,7 @@ export default function VehiclesScreen() {
     }
 
     if (masterPinForAction.trim() !== MASTER_PIN) {
-      setError("Incorrect PIN");
+      setError(t("admin.incorrectPin"));
       setMasterPinForAction(null);
       setVehicleToDelete(null);
       return;
@@ -157,12 +159,12 @@ export default function VehiclesScreen() {
 
     try {
       await deleteVehicle(token, vehicleToDelete, masterPinForAction.trim());
-      setSuccessMessage("Vehicle deleted successfully");
+      setSuccessMessage(t("admin.vehicles.deleteSuccess"));
       setMasterPinForAction(null);
       setVehicleToDelete(null);
       await refreshVehicles();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete vehicle");
+      setError(err instanceof Error ? err.message : t("admin.vehicles.deleteFailed"));
       setMasterPinForAction(null);
       setVehicleToDelete(null);
     }
@@ -176,12 +178,12 @@ export default function VehiclesScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <AdminTabs
             tabs={[
-              { key: "vehicles", label: "Vehicles", icon: "vehicles" },
-              { key: "companies", label: "Companies", icon: "companies" },
-              { key: "discounts", label: "Discounts", icon: "discounts" },
-              { key: "washers", label: "Washers", icon: "washers" },
-              { key: "pricing", label: "Pricing", icon: "pricing" },
-              { key: "appusers", label: "App Users", icon: "appusers" },
+              { key: "vehicles", label: t("admin.vehicles"), icon: "vehicles" },
+              { key: "companies", label: t("admin.companies"), icon: "companies" },
+              { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
+              { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -189,7 +191,7 @@ export default function VehiclesScreen() {
 
           <View style={styles.headerRow}>
             <Text variant="titleLarge" style={styles.title}>
-              Vehicle Database
+              {t("admin.vehicles.pageTitle")}
             </Text>
             <Button
               mode="contained"
@@ -201,13 +203,13 @@ export default function VehiclesScreen() {
               style={styles.addButton}
               labelStyle={styles.addButtonLabel}
             >
-              Add Vehicle
+              {t("admin.vehicles.addVehicle")}
             </Button>
           </View>
 
           <TextInput
             mode="outlined"
-            label="Search by License Plate"
+            label={t("admin.vehicles.searchPlaceholder")}
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchInput}
@@ -221,20 +223,20 @@ export default function VehiclesScreen() {
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text variant="bodyLarge">Loading vehicles...</Text>
+              <Text variant="bodyLarge">{t("admin.vehicles.loading")}</Text>
             </View>
           ) : vehicles.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text variant="bodyLarge" style={styles.emptyText}>
-                {searchQuery ? "No vehicles found" : "No vehicles found"}
+                {t("admin.vehicles.noVehicles")}
               </Text>
             </View>
           ) : isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
-                <DataTable.Title style={styles.headerCell}>License Plate</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Car Type</DataTable.Title>
-                <DataTable.Title style={styles.headerCell}>Actions</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("newRecord.licensePlate")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("newRecord.carCategory")}</DataTable.Title>
+                <DataTable.Title style={styles.headerCell}>{t("admin.actions")}</DataTable.Title>
               </DataTable.Header>
 
               {vehicles.map((vehicle) => (
@@ -302,17 +304,17 @@ export default function VehiclesScreen() {
                 onPress={() => setPage((p) => Math.max(1, p - 1))}
                 mode="outlined"
               >
-                Previous
+                {t("admin.pagination.previous")}
               </Button>
               <Text variant="bodyMedium" style={styles.paginationText}>
-                Page {page} of {totalPages}
+                {page} / {totalPages}
               </Text>
               <Button
                 disabled={page >= totalPages}
                 onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
                 mode="outlined"
               >
-                Next
+                {t("admin.pagination.next")}
               </Button>
             </View>
           )}
@@ -339,8 +341,8 @@ export default function VehiclesScreen() {
           setMasterPinForAction(pin);
           handleDeleteConfirm();
         }}
-        title="Delete Vehicle"
-        description="Enter Master PIN to confirm deletion. Vehicles with wash records cannot be deleted."
+        title={t("admin.vehicles.deleteTitle")}
+        description={t("admin.vehicles.deleteDescription")}
       />
 
       <Snackbar
