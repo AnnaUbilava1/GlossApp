@@ -45,8 +45,10 @@ function recordToLegacy(record) {
 
   const carType =
     SCHEMA_CAR_TYPE_TO_LEGACY[record.carCategory] || String(record.carCategory || '');
-  const serviceType =
-    SCHEMA_WASH_TYPE_TO_LEGACY[record.washType] || String(record.washType || '');
+  // Use custom service name if available, otherwise map enum to legacy name
+  const serviceType = record.customServiceName || 
+    SCHEMA_WASH_TYPE_TO_LEGACY[record.washType] || 
+    String(record.washType || '');
 
   const companyName = record.companyName || record.company?.name || null;
   const companyDiscount =
@@ -485,12 +487,31 @@ router.post(
         return res.status(400).json({ error: 'carType (or carCategory) is required' });
       }
 
-      const washType =
+      // Map serviceType to washType enum
+      // If it's a custom service (not in the mapping), use CUSTOM enum
+      // The actual custom service name will be stored in customServiceName field
+      let washType =
         req.body.washType ||
         LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType] ||
         null;
+      
+      let customServiceName = null;
+      
+      // If no mapping found, check if it's a custom service
+      // Custom services must have a price provided
       if (!washType) {
-        return res.status(400).json({ error: 'serviceType (or washType) is required' });
+        // Check if price is provided (indicates custom service)
+        // Price can be 0 or any number, just needs to be present
+        const hasPrice = req.body.price !== undefined && req.body.price !== null;
+        if (hasPrice && req.body.serviceType && String(req.body.serviceType).trim()) {
+          washType = 'CUSTOM';
+          // Store the original custom service name
+          customServiceName = String(req.body.serviceType).trim() || null;
+        } else {
+          return res.status(400).json({ 
+            error: 'serviceType (or washType) is required. For custom services, please provide both serviceType and price.' 
+          });
+        }
       }
 
       const washer = await resolveWasher({
@@ -542,6 +563,7 @@ router.post(
           discountPercentage,
           carCategory,
           washType,
+          customServiceName,
           washerUsername: washer.username,
           boxNumber,
 
@@ -855,9 +877,21 @@ router.put(
       const nextCarCategory =
         req.body.carCategory ||
         (req.body.carType ? LEGACY_CAR_TYPE_TO_SCHEMA[req.body.carType] : undefined);
-      const nextWashType =
+      
+      let nextWashType =
         req.body.washType ||
         (req.body.serviceType ? LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType] : undefined);
+      
+      let nextCustomServiceName = undefined;
+      
+      // Handle custom service: if serviceType doesn't map and price is provided
+      if (!nextWashType && req.body.serviceType && req.body.price) {
+        nextWashType = 'CUSTOM';
+        nextCustomServiceName = req.body.serviceType;
+      } else if (req.body.serviceType && LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType]) {
+        // If it's a predefined service, clear any existing custom service name
+        nextCustomServiceName = null;
+      }
 
       // License plate changes require (re)linking vehicle
       const nextLicensePlate = req.body.licensePlate || req.body.licenseNumber;
@@ -871,8 +905,11 @@ router.put(
       if (nextCarCategory) {
         updateData.carCategory = nextCarCategory;
       }
-      if (nextWashType) {
+      if (nextWashType !== undefined) {
         updateData.washType = nextWashType;
+      }
+      if (nextCustomServiceName !== undefined) {
+        updateData.customServiceName = nextCustomServiceName;
       }
 
       // Washer changes require relinking washer + snapshot username

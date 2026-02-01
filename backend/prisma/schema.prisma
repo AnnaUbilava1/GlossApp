@@ -27,6 +27,7 @@ enum WashType {
   OUTER
   ENGINE
   CHEMICAL
+  CUSTOM
 }
 
 enum PaymentMethod {
@@ -91,6 +92,7 @@ model WashRecord {
   discountPercentage Int          @default(0) @map("discount_percentage") // snapshot
   carCategory       CarType       @map("car_category") // snapshot
   washType          WashType      @map("wash_type") // snapshot
+  customServiceName String?       @map("custom_service_name") // snapshot - stores custom service name when washType is defaulted
   washerUsername    String        @map("washer_username") // snapshot
   boxNumber         Int           @default(0) @map("box_number")
   

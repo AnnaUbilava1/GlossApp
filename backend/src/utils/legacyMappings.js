@@ -31,6 +31,7 @@ export const SCHEMA_WASH_TYPE_TO_LEGACY = {
   INNER: 'Interior Wash',
   ENGINE: 'Engine Wash',
   CHEMICAL: 'Chemical Wash',
+  CUSTOM: 'Custom Service', // Fallback if customServiceName is missing
 };
 
 

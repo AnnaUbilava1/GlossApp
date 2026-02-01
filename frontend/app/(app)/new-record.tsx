@@ -43,6 +43,9 @@ export default function NewRecordScreen() {
   const [licensePlate, setLicensePlate] = useState("");
   const [carType, setCarType] = useState<string>("");
   const [serviceType, setServiceType] = useState<string>("");
+  const [isCustomService, setIsCustomService] = useState(false);
+  const [customServiceName, setCustomServiceName] = useState<string>("");
+  const [manualPrice, setManualPrice] = useState<string>("");
   const [boxNumber, setBoxNumber] = useState<string>("");
 
   // Company + discount selection (combined dropdown)
@@ -56,7 +59,7 @@ export default function NewRecordScreen() {
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountOption | null>(null);
 
   // Washer selection
-  type WasherOption = { id: number; username: string; name?: string | null };
+  type WasherOption = { id: number; username: string; name?: string | null; salaryPercentage?: number };
   const [washers, setWashers] = useState<WasherOption[]>([]);
   const [selectedWasher, setSelectedWasher] = useState<WasherOption | null>(null);
 
@@ -104,15 +107,57 @@ export default function NewRecordScreen() {
       carType &&
       serviceType &&
       selectedWasher?.id &&
-      selectedDiscount?.discountPercent !== undefined
+      selectedDiscount?.discountPercent !== undefined &&
+      !isCustomService // Don't auto-quote for custom services
   );
+
+  // Calculate prices for custom service
+  useEffect(() => {
+    if (!isCustomService || !manualPrice) {
+      if (!isCustomService) {
+        // Reset prices when switching away from custom service
+        return;
+      }
+      return;
+    }
+    
+    const price = parseFloat(manualPrice);
+    if (isNaN(price) || price <= 0) {
+      setOriginalPrice(null);
+      setDiscountedPrice(null);
+      setWasherCut(null);
+      return;
+    }
+
+    const discountPct = selectedDiscount?.discountPercent ?? 0;
+    const discounted = Math.max(0, price * (1 - discountPct / 100));
+    setOriginalPrice(price);
+    setDiscountedPrice(discounted);
+
+    // Calculate washer cut if washer is selected
+    if (selectedWasher) {
+      // Use already-loaded washers data to get salary percentage
+      const washer = washers.find((w) => w.id === selectedWasher.id);
+      if (washer && 'salaryPercentage' in washer) {
+        const washerPct = (washer as any).salaryPercentage || 0;
+        const washerCut = Math.max(0, price * (washerPct / 100));
+        setWasherCut(washerCut);
+      } else {
+        setWasherCut(0);
+      }
+    } else {
+      setWasherCut(null);
+    }
+  }, [isCustomService, manualPrice, selectedDiscount?.discountPercent, selectedWasher, washers]);
 
   useEffect(() => {
     if (!auth.token) return;
     if (!canQuote) {
-      setOriginalPrice(null);
-      setDiscountedPrice(null);
-      setWasherCut(null);
+      if (!isCustomService) {
+        setOriginalPrice(null);
+        setDiscountedPrice(null);
+        setWasherCut(null);
+      }
       return;
     }
 
@@ -165,25 +210,53 @@ export default function NewRecordScreen() {
     const boxNum = boxNumber ? Number(boxNumber) : 0;
     if (!licensePlate.trim()) return setError("License plate is required");
     if (!carType) return setError("Car category is required");
-    if (!serviceType) return setError("Wash type is required");
+    // For custom services, check customServiceName; for regular services, check serviceType
+    if (isCustomService) {
+      if (!customServiceName.trim()) return setError("Custom service name is required");
+      if (!manualPrice.trim()) return setError("Price is required for custom service");
+    } else {
+      if (!serviceType) return setError("Wash type is required");
+    }
     if (!selectedWasher) return setError("Washer is required");
     if (!selectedDiscount) return setError("Company + discount is required");
     if (!Number.isInteger(boxNum) || boxNum < 0) return setError("Box number must be an integer >= 0");
 
+    // Validate manual price if custom service
+    if (isCustomService) {
+      const price = parseFloat(manualPrice);
+      if (isNaN(price) || price <= 0) {
+        return setError("Price must be a positive number");
+      }
+    }
+
     setSubmitLoading(true);
     try {
+      const requestBody: any = {
+        licenseNumber: licensePlate.trim(),
+        carType,
+        serviceType: isCustomService ? customServiceName.trim() : serviceType,
+        washerId: selectedWasher.id,
+        companyId: selectedDiscount.companyId || undefined,
+        discountPercent: selectedDiscount.discountPercent,
+        boxNumber: boxNum,
+      };
+
+      // If custom service, always include manual price (required for backend to detect custom service)
+      if (isCustomService) {
+        if (!manualPrice || manualPrice.trim() === "") {
+          return setError("Price is required for custom services");
+        }
+        const price = parseFloat(manualPrice);
+        if (isNaN(price) || price < 0) {
+          return setError("Price must be a valid number");
+        }
+        requestBody.price = price;
+      }
+
       await apiFetch("/api/records", {
         token: auth.token,
         method: "POST",
-        body: JSON.stringify({
-          licenseNumber: licensePlate.trim(),
-          carType,
-          serviceType,
-          washerId: selectedWasher.id,
-          companyId: selectedDiscount.companyId || undefined,
-          discountPercent: selectedDiscount.discountPercent,
-          boxNumber: boxNum,
-        }),
+        body: JSON.stringify(requestBody),
       });
       router.push("/(app)/dashboard");
     } catch (e) {
@@ -438,10 +511,49 @@ export default function NewRecordScreen() {
                   <SearchableSelect
                     label="Wash Type"
                     required
-                    valueText={serviceType}
-                    options={[...SERVICE_TYPES].map((s) => ({ key: s, label: s }))}
-                    onSelect={(key) => setServiceType(key)}
+                    valueText={isCustomService ? "Custom Service" : serviceType}
+                    options={[
+                      ...SERVICE_TYPES.map((s) => ({ key: s, label: s })),
+                      { key: "__CUSTOM__", label: "Custom Service" },
+                    ]}
+                    onSelect={(key) => {
+                      if (key === "__CUSTOM__") {
+                        setIsCustomService(true);
+                        setServiceType("");
+                        setCustomServiceName("");
+                        setManualPrice("");
+                        setOriginalPrice(null);
+                        setDiscountedPrice(null);
+                        setWasherCut(null);
+                      } else {
+                        setIsCustomService(false);
+                        setServiceType(key);
+                        setCustomServiceName("");
+                        setManualPrice("");
+                      }
+                    }}
                   />
+
+                  {isCustomService && (
+                    <>
+                      {renderInput(
+                        "Custom Service Name",
+                        customServiceName,
+                        setCustomServiceName,
+                        "e.g., Special Detail, Wax, etc.",
+                        true,
+                        false
+                      )}
+                      {renderInput(
+                        "Price (Manual Entry)",
+                        manualPrice,
+                        setManualPrice,
+                        "0.00",
+                        true,
+                        false
+                      )}
+                    </>
+                  )}
 
                   <SearchableSelect
                     label="Washer Username"
