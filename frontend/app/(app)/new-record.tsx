@@ -26,7 +26,7 @@ import TabNavigation from "../../src/components/TabNavigation";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
-import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
+import { CAR_TYPES, formatMoney, SERVICE_TYPES } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -266,10 +266,6 @@ export default function NewRecordScreen() {
     }
   };
 
-  function formatMoney(value: number | null) {
-    if (value === null || value === undefined) return "—";
-    return `$${value.toFixed(2)}`;
-  }
 
   function SearchableSelect({
     label,

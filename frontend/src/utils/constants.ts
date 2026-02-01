@@ -60,3 +60,12 @@ export const MASTER_PIN = '1234';
 // Physical Person category (hardcoded)
 export const PHYSICAL_PERSON_CATEGORY = 'Physical Person';
 
+// Currency: Georgian Lari
+export const CURRENCY_SYMBOL = '₾';
+
+/** Format a number as money with Georgian Lari symbol */
+export function formatMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  return `${CURRENCY_SYMBOL}${value.toFixed(2)}`;
+}
+

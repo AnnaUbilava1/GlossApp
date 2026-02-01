@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
+import { formatMoney } from "../utils/constants";
 
 type Props = {
   records: DashboardRecord[];
@@ -18,8 +19,8 @@ export default function DashboardSummary({
   return (
     <View style={styles.footer}>
       <Text variant="bodyMedium" style={styles.footerText}>
-        Total Cash: ${cash.toFixed(2)} | Total Card: ${card.toFixed(2)} | Total
-        Revenue: ${total.toFixed(2)}
+        Total Cash: {formatMoney(cash)} | Total Card: {formatMoney(card)} | Total
+        Revenue: {formatMoney(total)}
       </Text>
     </View>
   );

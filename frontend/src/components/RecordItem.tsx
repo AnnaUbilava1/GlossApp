@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, DataTable, IconButton, Text } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
-import { getStatusColor, getStatusLabel } from "../utils/constants";
+import { formatMoney, getStatusColor, getStatusLabel } from "../utils/constants";
 import { formatDateTime } from "../utils/dateFormat";
 import { useAuth } from "../context/AuthContext";
 
@@ -37,13 +37,13 @@ export default function RecordItem({
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.serviceCell]}>{record.serviceType}</DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.priceCell]}>
-        <Text style={styles.priceText}>${(record.originalPrice ?? 0).toFixed(2)}</Text>
+        <Text style={styles.priceText}>{formatMoney(record.originalPrice ?? 0)}</Text>
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.priceCell]}>
-        <Text style={styles.priceText}>${record.price.toFixed(2)}</Text>
+        <Text style={styles.priceText}>{formatMoney(record.price)}</Text>
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.priceCell]}>
-        <Text style={styles.priceText}>${(record.washerCut ?? 0).toFixed(2)}</Text>
+        <Text style={styles.priceText}>{formatMoney(record.washerCut ?? 0)}</Text>
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.boxCell]}>{record.boxNumber}</DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.washerCell]}>{record.washerName}</DataTable.Cell>
