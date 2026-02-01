@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Button, DataTable, IconButton, Text } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
 import { getStatusColor, getStatusLabel } from "../utils/constants";
+import { formatDateTime } from "../utils/dateFormat";
 import { useAuth } from "../context/AuthContext";
 
 type Props = {
@@ -47,10 +48,10 @@ export default function RecordItem({
       <DataTable.Cell style={[styles.cell, styles.boxCell]}>{record.boxNumber}</DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.washerCell]}>{record.washerName}</DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.timeCell]}>
-        {String(record.startTime)}
+        {formatDateTime(record.startTime)}
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.timeCell]}>
-        {record.endTime ? String(record.endTime) : "—"}
+        {formatDateTime(record.endTime)}
       </DataTable.Cell>
       <DataTable.Cell style={styles.actionsCell}>
         <View style={styles.actionsContainer}>

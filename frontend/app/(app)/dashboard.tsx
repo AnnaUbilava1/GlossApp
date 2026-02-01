@@ -20,6 +20,7 @@ import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
 import { getStatusColor } from "../../src/utils/constants";
 import { MASTER_PIN } from "../../src/utils/constants";
+import { formatDateTime } from "../../src/utils/dateFormat";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -277,7 +278,7 @@ export default function DashboardScreen() {
                         Box {record.boxNumber} • {record.washerName}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileTime}>
-                        Start: {String(record.startTime)} | End: {record.endTime ? String(record.endTime) : "—"}
+                        Start: {formatDateTime(record.startTime)} | End: {formatDateTime(record.endTime)}
                       </Text>
                     </View>
                     <View style={styles.mobileActions}>
