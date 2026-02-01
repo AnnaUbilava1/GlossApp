@@ -14,6 +14,7 @@ import DashboardSummary from "../../src/components/DashboardSummary";
 import RecordItem from "../../src/components/RecordItem";
 import TabNavigation from "../../src/components/TabNavigation";
 import MasterPinModal from "../../src/components/MasterPinModal";
+import PaymentMethodModal from "../../src/components/PaymentMethodModal";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
@@ -57,6 +58,7 @@ export default function DashboardScreen() {
   const [masterPinForAction, setMasterPinForAction] = useState<string | null>(null);
   const [recordToEdit, setRecordToEdit] = useState<string | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [recordToPay, setRecordToPay] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   const handleFinish = async (recordId: string) => {
@@ -76,15 +78,20 @@ export default function DashboardScreen() {
     }
   };
 
-  const handlePayment = async (recordId: string) => {
+  const handlePaymentClick = (recordId: string) => {
+    setRecordToPay(recordId);
+  };
+
+  const handlePayment = async (recordId: string, paymentMethod: "cash" | "card") => {
     if (!auth.token) return;
     setActionError(null);
     try {
       await apiFetch(`/api/records/${recordId}/pay`, {
         token: auth.token,
         method: "POST",
-        body: JSON.stringify({ paymentMethod: "cash" }), // default to cash; can be extended with modal
+        body: JSON.stringify({ paymentMethod }),
       });
+      setActionSuccess(`Record marked as paid (${paymentMethod})`);
       setStartDate((d) => d);
     } catch (e) {
       const msg =
@@ -159,7 +166,7 @@ export default function DashboardScreen() {
       key={record.id}
       record={record}
       onFinish={() => handleFinish(record.id)}
-      onPayment={() => handlePayment(record.id)}
+      onPayment={() => handlePaymentClick(record.id)}
       onEdit={() => handleEditClick(record.id)}
       onDelete={() => handleDeleteClick(record.id)}
             />
@@ -274,34 +281,32 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                     <View style={styles.mobileActions}>
-                      {!record.isFinished && (
-                        <Button
-                          mode="contained"
-                          compact
-                          onPress={() => handleFinish(record.id)}
-                        >
-                          Finish
-                        </Button>
-                      )}
-                      {record.isFinished && (
-                        record.isPaid ? (
-                          <Button mode="contained" compact style={styles.paymentButtonPaid} disabled>
-                            Paid
-                          </Button>
-                        ) : auth.user?.role === "admin" ? (
-                        <Button
-                          mode="contained"
-                          compact
-                          onPress={() => handlePayment(record.id)}
-                            style={styles.paymentButtonUnpaid}
+                      {/* Show buttons only if not both finished and paid */}
+                      {!(record.isFinished && record.isPaid) && (
+                        <>
+                          {/* Finish button - visible to all users */}
+                          <Button
+                            mode="contained"
+                            compact
+                            onPress={() => handleFinish(record.id)}
+                            style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
+                            disabled={record.isFinished}
                           >
-                            Unpaid
+                            {record.isFinished ? "Finished" : "Finish"}
                           </Button>
-                        ) : (
-                          <Button mode="contained" compact style={styles.paymentButtonUnpaid} disabled>
-                            Unpaid
-                        </Button>
-                        )
+                          {/* Pay button - visible only to admin */}
+                          {auth.user?.role === "admin" && (
+                            <Button
+                              mode="contained"
+                              compact
+                              onPress={() => handlePaymentClick(record.id)}
+                              style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
+                              disabled={record.isPaid}
+                            >
+                              {record.isPaid ? "Paid" : "Pay"}
+                            </Button>
+                          )}
+                        </>
                       )}
                       {auth.user?.role === "admin" && (
                         <>
@@ -362,6 +367,21 @@ export default function DashboardScreen() {
         }}
         title="Delete Record"
         description="Enter Master PIN to confirm deletion"
+      />
+
+      <PaymentMethodModal
+        visible={recordToPay !== null}
+        onDismiss={() => {
+          setRecordToPay(null);
+        }}
+        onSelect={(method) => {
+          if (recordToPay) {
+            handlePayment(recordToPay, method);
+            setRecordToPay(null);
+          }
+        }}
+        title="Select Payment Method"
+        description="Choose how the payment was made:"
       />
 
       <Snackbar
@@ -486,14 +506,17 @@ const styles = StyleSheet.create({
   finishButton: {
     backgroundColor: "#FF9800",
   },
+  finishButtonDone: {
+    backgroundColor: "#4CAF50",
+  },
   finishButtonLabel: {
     fontSize: 12,
   },
   paymentButtonUnpaid: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: "#D32F2F", // Red when unpaid
   },
   paymentButtonPaid: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#2E7D32", // Green when paid
   },
   paymentButtonLabel: {
     fontSize: 12,

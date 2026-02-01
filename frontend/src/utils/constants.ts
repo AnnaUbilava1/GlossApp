@@ -27,11 +27,16 @@ export const STATUS_COLORS = {
 
 // Helper function to get status color
 export function getStatusColor(isFinished: boolean, isPaid: boolean): string {
+  // Red: neither paid nor finished
   if (!isFinished && !isPaid) {
     return STATUS_COLORS.UNFINISHED_UNPAID;
-  } else if (isFinished && !isPaid) {
+  }
+  // Orange: either paid OR finished (but not both)
+  if ((isFinished && !isPaid) || (!isFinished && isPaid)) {
     return STATUS_COLORS.FINISHED_UNPAID;
-  } else if (isFinished && isPaid) {
+  }
+  // Green: both paid AND finished
+  if (isFinished && isPaid) {
     return STATUS_COLORS.FINISHED_PAID;
   }
   return STATUS_COLORS.UNFINISHED_UNPAID;
