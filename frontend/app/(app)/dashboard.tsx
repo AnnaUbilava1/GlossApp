@@ -18,8 +18,7 @@ import PaymentMethodModal from "../../src/components/PaymentMethodModal";
 import { useAuth } from "../../src/context/AuthContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
-import { getStatusColor } from "../../src/utils/constants";
-import { MASTER_PIN } from "../../src/utils/constants";
+import { formatMoney, getStatusColor, MASTER_PIN } from "../../src/utils/constants";
 import { formatDateTime } from "../../src/utils/dateFormat";
 
 const { width } = Dimensions.get("window");
@@ -263,13 +262,13 @@ export default function DashboardScreen() {
                         {record.licenseNumber}
                       </Text>
                       <Text style={[styles.mobilePrice, { color: "#2F80ED" }]}>
-                        ${record.price.toFixed(2)}
+                        {formatMoney(record.price)}
                       </Text>
                     </View>
                     <View style={styles.mobileCardBody}>
                       <Text variant="bodyMedium">{record.carType} • {record.serviceType}</Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
-                        Original: ${(record.originalPrice ?? 0).toFixed(2)} • Washer Cut: ${(record.washerCut ?? 0).toFixed(2)}
+                        Original: {formatMoney(record.originalPrice ?? 0)} • Washer Cut: {formatMoney(record.washerCut ?? 0)}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
                         Box {record.boxNumber} • {record.washerName}
