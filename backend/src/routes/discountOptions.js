@@ -24,6 +24,14 @@ router.use(authenticateToken);
  *       401:
  *         description: Unauthorized
  */
+// Hardcoded Physical Person option (0% discount)
+const PHYSICAL_PERSON_OPTION = {
+  label: 'Physical Person 0%',
+  companyId: null,
+  discountPercent: 0,
+  discountId: 'physical-0',
+};
+
 router.get('/', async (req, res) => {
   try {
     const discounts = await prisma.discount.findMany({
@@ -39,7 +47,7 @@ router.get('/', async (req, res) => {
       discountId: d.id,
     }));
 
-    res.json({ options: companyOptions });
+    res.json({ options: [PHYSICAL_PERSON_OPTION, ...companyOptions] });
   } catch (error) {
     console.error('Discount options error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -64,6 +72,17 @@ router.get('/', async (req, res) => {
  *       403:
  *         description: Admin access required
  */
+// Hardcoded Physical Person discount for admin list (read-only, 0%)
+const PHYSICAL_PERSON_DISCOUNT = {
+  id: 'physical-0',
+  companyId: null,
+  companyName: 'Physical Person',
+  percentage: 0,
+  active: true,
+  createdAt: new Date(0),
+  updatedAt: new Date(0),
+};
+
 router.get('/list', requireAdmin, async (req, res) => {
   try {
     const discounts = await prisma.discount.findMany({
@@ -81,7 +100,7 @@ router.get('/list', requireAdmin, async (req, res) => {
       updatedAt: d.updatedAt,
     }));
 
-    res.json({ discounts: formattedDiscounts });
+    res.json({ discounts: [PHYSICAL_PERSON_DISCOUNT, ...formattedDiscounts] });
   } catch (error) {
     console.error('List discounts error:', error);
     res.status(500).json({ error: 'Internal server error' });
