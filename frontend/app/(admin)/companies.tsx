@@ -427,7 +427,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   discountChip: {
-    height: 24,
   },
   noDiscounts: {
     color: "#9E9E9E",

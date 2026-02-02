@@ -97,9 +97,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "records.paidSuccess": "ჩანაწერი მონიშნულია გადახდილად",
 
     // Summary
-    "summary.totalCash": "ჯამი ნაღდი",
-    "summary.totalCard": "ჯამი ბარათი",
-    "summary.totalRevenue": "ჯამი სრული შემოსავალი",
+    "summary.totalCash": "ჯამური ნაღდი",
+    "summary.totalCard": "ჯამური ბარათი",
+    "summary.totalRevenue": "სრული შემოსავალი",
 
     // Admin
     "admin.panelTitle": "ადმინ პანელი",
