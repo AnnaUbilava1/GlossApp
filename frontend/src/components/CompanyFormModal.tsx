@@ -24,7 +24,7 @@ type CompanyFormModalProps = {
   editingCompany?: Company | null;
 };
 
-const AVAILABLE_DISCOUNT_PERCENTAGES = [10, 20, 30, 40, 50];
+const AVAILABLE_DISCOUNT_PERCENTAGES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 export default function CompanyFormModal({
   visible,
