@@ -27,7 +27,13 @@ import { useAuth } from "../../src/context/AuthContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { apiFetch } from "../../src/utils/api";
 import { useDashboard } from "../../src/hooks/useDashboard";
-import { CAR_TYPES, formatMoney, SERVICE_TYPES } from "../../src/utils/constants";
+import {
+  CAR_TYPES,
+  SERVICE_TYPES,
+  formatMoney,
+  getCarTypeLabel,
+  getServiceTypeLabel,
+} from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -35,7 +41,7 @@ const isTablet = width >= 768;
 export default function NewRecordScreen() {
   const theme = useTheme();
   const auth = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState("new-record");
   
   // Get record count for tab display
@@ -501,17 +507,29 @@ export default function NewRecordScreen() {
                   <SearchableSelect
                     label={t("newRecord.carCategory")}
                     required
-                    valueText={carType}
-                    options={[...CAR_TYPES].map((c) => ({ key: c, label: c }))}
+                    valueText={carType ? getCarTypeLabel(carType, language) : ""}
+                    options={[...CAR_TYPES].map((c) => ({
+                      key: c,
+                      label: getCarTypeLabel(c, language),
+                    }))}
                     onSelect={(key) => setCarType(key)}
                   />
 
                   <SearchableSelect
                     label={t("newRecord.washType")}
                     required
-                    valueText={isCustomService ? t("newRecord.customService") : serviceType}
+                    valueText={
+                      isCustomService
+                        ? t("newRecord.customService")
+                        : serviceType
+                        ? getServiceTypeLabel(serviceType, language)
+                        : ""
+                    }
                     options={[
-                      ...SERVICE_TYPES.map((s) => ({ key: s, label: s })),
+                      ...SERVICE_TYPES.map((s) => ({
+                        key: s,
+                        label: getServiceTypeLabel(s, language),
+                      })),
                       { key: "__CUSTOM__", label: t("newRecord.customService") },
                     ]}
                     onSelect={(key) => {
