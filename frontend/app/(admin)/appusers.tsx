@@ -115,7 +115,7 @@ export default function AppUsersScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AdminHeader user={{ name: "John Doe" }} />
+      <AdminHeader user={auth.user ? { name: auth.user.name || auth.user.email } : { name: "Admin" }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

@@ -36,7 +36,7 @@ CAR_TYPES.forEach((carType) => {
 
 export default function PricingScreen() {
   const theme = useTheme();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("pricing");
   const [pricing, setPricing] = useState<PricingMatrix>(initialPricing);
@@ -176,7 +176,7 @@ export default function PricingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={["top"]}>
-      <AdminHeader user={{ name: "John Doe" }} />
+      <AdminHeader user={user ? { name: user.name || user.email } : { name: "Admin" }} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>

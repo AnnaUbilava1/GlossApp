@@ -67,13 +67,13 @@ export default function LoginScreen() {
               <Button
                 mode={language === "ka" ? "contained" : "outlined"}
                 compact
-                onPress={() => setLanguage("en")}
+                onPress={() => setLanguage("ka")}
                 style={styles.langButton}
               >
                 ქართული
               </Button>
               <Button
-                mode={language === "ka" ? "contained" : "outlined"}
+                mode={language === "en" ? "contained" : "outlined"}
                 compact
                 onPress={() => setLanguage("en")}
                 style={styles.langButton}

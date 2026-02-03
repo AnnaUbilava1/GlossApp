@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 
 const { width } = Dimensions.get("window");
@@ -21,8 +22,10 @@ export default function AdminHeader({
   onLogout,
 }: AdminHeaderProps) {
   const theme = useTheme();
-  const { t } = useLanguage();
-  const userName = user?.name || "John Doe";
+  const auth = useAuth();
+  const { language, setLanguage, t } = useLanguage();
+  const userName =
+    user?.name || auth.user?.name || auth.user?.email || "Admin";
 
   const handleBack = () => {
     if (onBack) {
@@ -36,6 +39,7 @@ export default function AdminHeader({
     if (onLogout) {
       onLogout();
     } else {
+      auth.logout();
       router.replace("/(auth)");
     }
   };
@@ -57,6 +61,24 @@ export default function AdminHeader({
       </View>
 
       <View style={styles.rightSection}>
+        <View style={styles.langRow}>
+          <Button
+            mode={language === "ka" ? "contained-tonal" : "text"}
+            compact
+            onPress={() => setLanguage("ka")}
+            labelStyle={styles.langLabel}
+          >
+            ქართ
+          </Button>
+          <Button
+            mode={language === "en" ? "contained-tonal" : "text"}
+            compact
+            onPress={() => setLanguage("en")}
+            labelStyle={styles.langLabel}
+          >
+            EN
+          </Button>
+        </View>
         <Button
           mode="text"
           icon="arrow-left"
@@ -123,6 +145,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  langRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  langLabel: {
+    fontSize: 12,
   },
   backButton: {
     marginRight: 4,
