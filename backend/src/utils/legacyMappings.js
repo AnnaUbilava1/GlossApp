@@ -31,7 +31,69 @@ export const SCHEMA_WASH_TYPE_TO_LEGACY = {
   INNER: 'Interior Wash',
   ENGINE: 'Engine Wash',
   CHEMICAL: 'Chemical Wash',
-  CUSTOM: 'Custom Service', // Fallback if customServiceName is missing
+  CUSTOM: 'Custom Service', 
 };
+
+// ---------------------------------------------------------------------------
+// Localized labels for car types and wash types
+// These are used when returning data to the frontend so that enum codes
+// from the database can be shown in the requested language.
+// ---------------------------------------------------------------------------
+
+export const CAR_TYPE_LABELS = {
+  ka: {
+    SEDAN: 'სედანი',
+    PREMIUM_CLASS: 'პრემიუმ კლასი',
+    SMALL_JEEP: 'ჯიპი',
+    BIG_JEEP: 'დიდი ჯიპი',
+    MICROBUS: 'მინივენი',
+  },
+  en: {
+    SEDAN: 'Sedan',
+    PREMIUM_CLASS: 'Premium',
+    SMALL_JEEP: 'Jeep',
+    BIG_JEEP: 'Big Jeep',
+    MICROBUS: 'Minivan',
+  },
+};
+
+export const WASH_TYPE_LABELS = {
+  ka: {
+    COMPLETE: 'სრული რეცხვა',
+    OUTER: 'გარე რეცხვა',
+    INNER: 'სალონის რეცხვა',
+    ENGINE: 'ძრავის რეცხვა',
+    CHEMICAL: 'ქიმიური რეცხვა',
+    CUSTOM: 'სხვა სერვისი',
+  },
+  en: {
+    COMPLETE: 'Complete Wash',
+    OUTER: 'Outer Wash',
+    INNER: 'Interior Wash',
+    ENGINE: 'Engine Wash',
+    CHEMICAL: 'Chemical Wash',
+    CUSTOM: 'Custom Service',
+  },
+};
+
+export function getCarTypeLabel(carCategory, lang = 'ka') {
+  const safeLang = lang === 'en' ? 'en' : 'ka';
+  return (
+    CAR_TYPE_LABELS[safeLang]?.[carCategory] ||
+    CAR_TYPE_LABELS.ka[carCategory] ||
+    carCategory
+  );
+}
+
+export function getWashTypeLabel(washType, lang = 'ka') {
+  const safeLang = lang === 'en' ? 'en' : 'ka';
+  return (
+    WASH_TYPE_LABELS[safeLang]?.[washType] ||
+    WASH_TYPE_LABELS.ka[washType] ||
+    washType
+  );
+}
+
+
 
 

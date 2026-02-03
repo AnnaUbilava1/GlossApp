@@ -7,6 +7,8 @@ import {
   LEGACY_SERVICE_TYPE_TO_SCHEMA,
   SCHEMA_CAR_TYPE_TO_LEGACY,
   SCHEMA_WASH_TYPE_TO_LEGACY,
+  getCarTypeLabel,
+  getWashTypeLabel,
 } from '../utils/legacyMappings.js';
 
 const router = express.Router();
@@ -21,7 +23,7 @@ function toDecimalString(value) {
   return num.toFixed(2);
 }
 
-function recordToLegacy(record) {
+function recordToLegacy(record, lang = 'ka') {
   const discountPercent = record.discountPercentage ?? 0;
   
   // Prisma Decimal fields need to be converted properly
@@ -38,17 +40,23 @@ function recordToLegacy(record) {
   const discountedPriceNum = getDecimalValue(record.discountedPrice);
   const originalPriceNum = getDecimalValue(record.originalPrice);
   const washerCutNum = getDecimalValue(record.washerCut);
-  const price = discountedPriceNum || originalPriceNum;
+
+  // IMPORTANT:
+  // Use discountedPrice when it exists, even if it is 0 (e.g. 100% discount).
+  // Using `||` would incorrectly fall back to originalPrice when discountedPrice is 0.
+  const hasDiscountedPrice =
+    record.discountedPrice !== null && record.discountedPrice !== undefined;
+  const price = hasDiscountedPrice ? discountedPriceNum : originalPriceNum;
 
   const isFinished = Boolean(record.endTime);
   const isPaid = Boolean(record.paymentMethod);
 
-  const carType =
-    SCHEMA_CAR_TYPE_TO_LEGACY[record.carCategory] || String(record.carCategory || '');
-  // Use custom service name if available, otherwise map enum to legacy name
-  const serviceType = record.customServiceName || 
-    SCHEMA_WASH_TYPE_TO_LEGACY[record.washType] || 
-    String(record.washType || '');
+  // Localized labels for enums from the database
+  const carType = getCarTypeLabel(record.carCategory, lang);
+  // Use custom service name if available, otherwise map enum to localized name
+  const serviceType =
+    record.customServiceName ||
+    getWashTypeLabel(record.washType, lang);
 
   const companyName = record.companyName || record.company?.name || null;
   const companyDiscount =
@@ -228,6 +236,8 @@ function computeWasherCut(originalPrice, washerSalaryPercentage) {
  */
 router.get('/', async (req, res) => {
   try {
+    const langHeader = String(req.headers['x-language'] || '').toLowerCase();
+    const lang = langHeader === 'en' ? 'en' : 'ka';
     const { status, startDate, endDate, limit = 50 } = req.query;
 
     const where = {};
@@ -276,7 +286,7 @@ router.get('/', async (req, res) => {
       take: parseInt(limit),
     });
 
-    res.json({ records: records.map(recordToLegacy), rawRecords: records });
+    res.json({ records: records.map((r) => recordToLegacy(r, lang)), rawRecords: records });
   } catch (error) {
     console.error('Get records error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -319,6 +329,8 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
+    const langHeader = String(req.headers['x-language'] || '').toLowerCase();
+    const lang = langHeader === 'en' ? 'en' : 'ka';
     const record = await prisma.washRecord.findUnique({
       where: { id: req.params.id },
       include: {
@@ -340,7 +352,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Record not found' });
     }
 
-    res.json({ record: recordToLegacy(record), rawRecord: record });
+    res.json({ record: recordToLegacy(record, lang), rawRecord: record });
   } catch (error) {
     console.error('Get record error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -469,6 +481,8 @@ router.post(
   ],
   async (req, res) => {
     try {
+      const langHeader = String(req.headers['x-language'] || '').toLowerCase();
+      const lang = langHeader === 'en' ? 'en' : 'ka';
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -584,7 +598,7 @@ router.post(
         },
       });
 
-      res.status(201).json({ record: recordToLegacy(record), rawRecord: record });
+      res.status(201).json({ record: recordToLegacy(record, lang), rawRecord: record });
     } catch (error) {
       console.error('Create record error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -700,6 +714,8 @@ router.post(
   [body('paymentMethod').isIn(['cash', 'card']).withMessage('paymentMethod must be cash or card')],
   async (req, res) => {
     try {
+      const langHeader = String(req.headers['x-language'] || '').toLowerCase();
+      const lang = langHeader === 'en' ? 'en' : 'ka';
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -1004,7 +1020,7 @@ router.put(
         },
       });
 
-      res.json({ record: recordToLegacy(record), rawRecord: record });
+      res.json({ record: recordToLegacy(record, lang), rawRecord: record });
     } catch (error) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Record not found' });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../utils/api";
+import { useLanguage } from "../context/LanguageContext";
 
 export type DashboardRecord = {
   id: string;
@@ -34,6 +35,7 @@ export function useDashboard(token: string | null) {
   const [startDate, setStartDate] = useState<string>("2026-01-01");
   const [endDate, setEndDate] = useState<string>(todayDateString());
   const [refreshKey, setRefreshKey] = useState(0);
+  const { language } = useLanguage();
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -57,7 +59,10 @@ export function useDashboard(token: string | null) {
         ? `/api/records?${params.toString()}`
         : "/api/records";
 
-    apiFetch<{ records: DashboardRecord[] }>(path, { token })
+    apiFetch<{ records: DashboardRecord[] }>(path, {
+      token,
+      headers: { "X-Language": language },
+    })
       .then((data) => {
         setRecords(data.records || []);
       })
@@ -65,7 +70,7 @@ export function useDashboard(token: string | null) {
         setError(e instanceof Error ? e.message : "Failed to load records")
       )
       .finally(() => setLoading(false));
-  }, [token, startDate, endDate, refreshKey]);
+  }, [token, startDate, endDate, refreshKey, language]);
 
   const summary = useMemo(() => {
     let cash = 0;
