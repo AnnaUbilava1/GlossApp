@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Dimensions,
     ScrollView,
@@ -22,13 +22,33 @@ import { useLanguage } from "../../src/context/LanguageContext";
 import { formatMoney, getStatusColor, MASTER_PIN } from "../../src/utils/constants";
 import { formatDateTime } from "../../src/utils/dateFormat";
 
-const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+type WasherOption = { id: number; username: string; name?: string | null; salaryPercentage?: number };
 
 export default function DashboardScreen() {
   const theme = useTheme();
   const auth = useAuth();
   const { t } = useLanguage();
+  const [screenDimensions, setScreenDimensions] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
+  });
+  
+  // Consider device type: use both width and height to better handle landscape
+  // A device is considered tablet if width >= 768 AND it's not a phone in landscape
+  // (phones in landscape typically have width > height, but still want mobile view)
+  const isTablet = screenDimensions.width >= 768 && 
+                   (screenDimensions.width >= screenDimensions.height || screenDimensions.width >= 1024);
+
+  // Listen for screen dimension changes (including orientation)
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenDimensions({ width: window.width, height: window.height });
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  // Generate styles based on screen size
+  const styles = createStyles(isTablet);
   const [activeTab, setActiveTab] = React.useState("all-records");
   const {
     records,
@@ -38,9 +58,49 @@ export default function DashboardScreen() {
     endDate,
     setStartDate,
     setEndDate,
-    summary,
     refresh,
   } = useDashboard(auth.token);
+
+  // Local filters for washer, payment method, and wash status
+  const [washerFilter, setWasherFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "cash" | "card">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unfinished" | "finished_unpaid" | "paid" | "unfinished_paid">("all");
+
+  // Active washers for washer dropdown filter
+  const [washers, setWashers] = useState<WasherOption[]>([]);
+
+  useEffect(() => {
+    if (!auth.token) return;
+    apiFetch<{ washers: WasherOption[] }>("/api/washers", { token: auth.token })
+      .then((res) => {
+        setWashers(res.washers || []);
+      })
+      .catch(() => {
+        // Best-effort; dashboard still works without washer list
+      });
+  }, [auth.token]);
+
+  const filteredRecords = useMemo(
+    () =>
+      records.filter((r) => {
+        // Washer filter: exact match on washer username (washerName is username snapshot)
+        if (washerFilter && r.washerName !== washerFilter) return false;
+
+        if (paymentFilter !== "all") {
+          if (!r.isPaid || r.paymentMethod !== paymentFilter) {
+            return false;
+          }
+        }
+
+        if (statusFilter === "unfinished" && r.isFinished) return false;
+        if (statusFilter === "finished_unpaid" && !(r.isFinished && !r.isPaid)) return false;
+        if (statusFilter === "paid" && !r.isPaid) return false;
+        if (statusFilter === "unfinished_paid" && !(!r.isFinished && r.isPaid)) return false;
+
+        return true;
+      }),
+    [records, washerFilter, paymentFilter, statusFilter]
+  );
 
   // Refetch records when screen gains focus (e.g. after adding a record)
   useFocusEffect(
@@ -204,32 +264,6 @@ export default function DashboardScreen() {
             </Text>
           )}
 
-          {/* Date range filter */}
-          <View style={styles.dateFilterRow}>
-            <View style={styles.dateField}>
-              <Text variant="labelSmall" style={styles.dateLabel}>
-                {t("records.startDate")}
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={startDate}
-                onChangeText={setStartDate}
-                style={styles.dateInput}
-              />
-            </View>
-            <View style={styles.dateField}>
-              <Text variant="labelSmall" style={styles.dateLabel}>
-                {t("records.endDate")}
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={endDate}
-                onChangeText={setEndDate}
-                style={styles.dateInput}
-              />
-            </View>
-          </View>
-
           {isTablet ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
@@ -247,12 +281,12 @@ export default function DashboardScreen() {
                 <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
               </DataTable.Header>
 
-              {records.map((record) => renderRecordRow(record))}
+              {filteredRecords.map((record) => renderRecordRow(record))}
             </DataTable>
           ) : (
             // Mobile view: Card-based layout
             <View style={styles.mobileContainer}>
-              {records.map((record) => {
+              {filteredRecords.map((record) => {
                 const bgColor = getStatusColor(record.isFinished, record.isPaid);
                 return (
                   <View
@@ -328,16 +362,24 @@ export default function DashboardScreen() {
               })}
             </View>
           )}
-
-          {/* Footer Summary */}
-          <DashboardSummary
-            records={records}
-            cash={summary.cash}
-            card={summary.card}
-            total={summary.total}
-          />
         </View>
       </ScrollView>
+
+      {/* Sticky bottom summary & filters */}
+      <DashboardSummary
+        records={filteredRecords}
+        washers={washers}
+        startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        washerFilter={washerFilter}
+        setWasherFilter={setWasherFilter}
+        paymentFilter={paymentFilter}
+        setPaymentFilter={setPaymentFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+      />
 
       <MasterPinModal
         visible={recordToEdit !== null}
@@ -400,7 +442,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (isTablet: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -520,36 +562,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mobileContainer: {
-    gap: 12,
+    gap: 2,
   },
   mobileCard: {
     borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 8,
   },
   mobileCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   mobileLicense: {
     fontWeight: "bold",
   },
   mobilePrice: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
   },
   mobileCardBody: {
-    marginBottom: 12,
+    marginBottom: 8,
+    flexWrap: "wrap",
+    flexDirection: "row",
   },
   mobileDetails: {
     color: "#757575",
-    marginTop: 4,
+    marginTop: 2,
   },
   mobileTime: {
     color: "#757575",
-    marginTop: 4,
+    marginTop: 2,
   },
   mobileActions: {
     flexDirection: "row",
