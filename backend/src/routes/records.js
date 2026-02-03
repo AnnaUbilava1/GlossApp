@@ -40,7 +40,13 @@ function recordToLegacy(record, lang = 'ka') {
   const discountedPriceNum = getDecimalValue(record.discountedPrice);
   const originalPriceNum = getDecimalValue(record.originalPrice);
   const washerCutNum = getDecimalValue(record.washerCut);
-  const price = discountedPriceNum || originalPriceNum;
+
+  // IMPORTANT:
+  // Use discountedPrice when it exists, even if it is 0 (e.g. 100% discount).
+  // Using `||` would incorrectly fall back to originalPrice when discountedPrice is 0.
+  const hasDiscountedPrice =
+    record.discountedPrice !== null && record.discountedPrice !== undefined;
+  const price = hasDiscountedPrice ? discountedPriceNum : originalPriceNum;
 
   const isFinished = Boolean(record.endTime);
   const isPaid = Boolean(record.paymentMethod);
