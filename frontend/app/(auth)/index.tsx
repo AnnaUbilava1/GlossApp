@@ -62,26 +62,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Language switcher */}
-            <View style={styles.languageRow}>
-              <Button
-                mode={language === "ka" ? "contained" : "outlined"}
-                compact
-                onPress={() => setLanguage("ka")}
-                style={styles.langButton}
-              >
-                ქართული
-              </Button>
-              <Button
-                mode={language === "en" ? "contained" : "outlined"}
-                compact
-                onPress={() => setLanguage("en")}
-                style={styles.langButton}
-              >
-                English
-              </Button>
-            </View>
-
             {/* Welcome Text */}
             <Text variant="headlineMedium" style={styles.welcomeText}>
               {t("auth.welcome")}
@@ -129,8 +109,27 @@ export default function LoginScreen() {
                 />
               </View>
 
-              {/* Forgot Password Link */}
-              <View style={styles.forgotPasswordContainer}>
+              {/* Language switcher + Forgot Password on same row */}
+              <View style={styles.actionsRow}>
+                <View style={styles.languageRow}>
+                  <Button
+                    mode={language === "ka" ? "contained" : "outlined"}
+                    compact
+                    onPress={() => setLanguage("ka")}
+                    style={styles.langButton}
+                  >
+                    ქართული
+                  </Button>
+                  <Button
+                    mode={language === "en" ? "contained" : "outlined"}
+                    compact
+                    onPress={() => setLanguage("en")}
+                    style={styles.langButton}
+                  >
+                    English
+                  </Button>
+                </View>
+
                 <Button
                   mode="text"
                   onPress={() => {
@@ -203,9 +202,13 @@ const styles = StyleSheet.create({
   },
   languageRow: {
     flexDirection: "row",
-    justifyContent: "center",
     gap: 8,
-    marginBottom: 20,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
   },
   langButton: {
     minWidth: 90,
