@@ -96,10 +96,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     "records.deletedSuccess": "ჩანაწერი წარმატებით წაიშლა",
     "records.paidSuccess": "ჩანაწერი მონიშნულია გადახდილად",
 
+    // Filters / dashboard summary
+    "filters.washer": "მრეცხავი",
+    "filters.washers": "მრეცხავი",
+    "filters.paymentMethod": "გადახდის მეთოდი",
+    "filters.washStatus": "რეცხვის სტატუსი",
+    "filters.all": "ყველა",
+    "filters.cash": "ნაღდი",
+    "filters.card": "ბარათი",
+    "filters.unfinishedPaid": "დაუსრულებელი გადახდილი",
+    "filters.title": "ფილტრები",
+    "button.ok": "დადასტურება",
+    "button.cancel": "გაუქმება",
+
     // Summary
-    "summary.totalCash": "ჯამური ნაღდი",
-    "summary.totalCard": "ჯამური ბარათი",
-    "summary.totalRevenue": "სრული შემოსავალი",
+    "summary.realization": "რეალიზაცია",
+    "summary.washersShare": "მრეცხავის წილი",
+    "summary.revenue": "მოგება",
 
     // Admin
     "admin.panelTitle": "ადმინ პანელი",
@@ -313,10 +326,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     "records.deletedSuccess": "Record deleted successfully",
     "records.paidSuccess": "Record marked as paid",
 
+    // Filters / dashboard summary
+    "filters.washer": "Washer",
+    "filters.washers": "Washers",
+    "filters.paymentMethod": "Payment Method",
+    "filters.washStatus": "Wash Status",
+    "filters.all": "All",
+    "filters.cash": "Cash",
+    "filters.card": "Card",
+    "filters.unfinishedPaid": "Unfinished Paid",
+    "filters.title": "Filters",
+    "button.ok": "OK",
+    "button.cancel": "Cancel",
+
     // Summary
-    "summary.totalCash": "Total Cash",
-    "summary.totalCard": "Total Card",
-    "summary.totalRevenue": "Total Revenue",
+    "summary.realization": "Realization",
+    "summary.washersShare": "Washers' Share",
+    "summary.revenue": "Revenue",
 
     // Admin
     "admin.panelTitle": "Admin Panel",
