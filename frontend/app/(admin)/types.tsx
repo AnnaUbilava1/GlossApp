@@ -326,8 +326,8 @@ export default function TypesScreen() {
               { key: "companies", label: t("admin.companies"), icon: "companies" },
               { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
               { key: "washers", label: t("admin.washers"), icon: "washers" },
-              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
               { key: "types", label: t("admin.types"), icon: "types" },
+              { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
