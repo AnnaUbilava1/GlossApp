@@ -7,6 +7,8 @@ export type TypeConfig = {
   displayNameEn: string;
   isActive: boolean;
   sortOrder: number;
+  /** True if used by any vehicle, record, or pricing (admin types page only). Delete is blocked when true. */
+  inUse?: boolean;
 };
 
 type ListResponse = {

@@ -51,12 +51,24 @@ export default function TypesScreen() {
   const [formCode, setFormCode] = useState("");
   const [formNameKa, setFormNameKa] = useState("");
   const [formNameEn, setFormNameEn] = useState("");
-  const [formSortOrder, setFormSortOrder] = useState<string>("0");
   const [formIsActive, setFormIsActive] = useState(true);
 
   const [pendingAction, setPendingAction] = useState<
     | null
-    | { kind: "create-car" | "create-wash" | "update-car" | "update-wash" | "delete-car" | "delete-wash"; id?: string }
+    | {
+        kind:
+          | "create-car"
+          | "create-wash"
+          | "update-car"
+          | "update-wash"
+          | "delete-car"
+          | "delete-wash"
+          | "disable-car"
+          | "enable-car"
+          | "disable-wash"
+          | "enable-wash";
+        id?: string;
+      }
   >(null);
   const [masterPinVisible, setMasterPinVisible] = useState(false);
 
@@ -104,7 +116,6 @@ export default function TypesScreen() {
     setFormCode("");
     setFormNameKa("");
     setFormNameEn("");
-    setFormSortOrder("0");
     setFormIsActive(true);
   };
 
@@ -114,14 +125,12 @@ export default function TypesScreen() {
       setFormCode(type.code);
       setFormNameKa(type.displayNameKa);
       setFormNameEn(type.displayNameEn);
-      setFormSortOrder(String(type.sortOrder ?? 0));
       setFormIsActive(type.isActive);
     } else {
       setEditTarget({ kind, type: null });
       setFormCode("");
       setFormNameKa("");
       setFormNameEn("");
-      setFormSortOrder("0");
       setFormIsActive(true);
     }
   };
@@ -133,7 +142,11 @@ export default function TypesScreen() {
       | "update-car"
       | "update-wash"
       | "delete-car"
-      | "delete-wash",
+      | "delete-wash"
+      | "disable-car"
+      | "enable-car"
+      | "disable-wash"
+      | "enable-wash",
     id?: string
   ) => {
     setPendingAction({ kind: action, id });
@@ -150,7 +163,8 @@ export default function TypesScreen() {
       setLoading(true);
       setError(null);
 
-      const sortOrderNumber = Number(formSortOrder || "0");
+      const sortOrderForCreate = 0;
+      const sortOrderForUpdate = editTarget?.type?.sortOrder ?? 0;
 
       if (kind === "create-car") {
         const created = await createCarTypeConfig(token, pin, {
@@ -158,7 +172,7 @@ export default function TypesScreen() {
           displayNameKa: formNameKa.trim(),
           displayNameEn: formNameEn.trim(),
           isActive: formIsActive,
-          sortOrder: Number.isFinite(sortOrderNumber) ? sortOrderNumber : 0,
+          sortOrder: sortOrderForCreate,
         });
         setCarTypes((prev) => [...prev, created]);
         setSuccess(t("admin.types.carCreated"));
@@ -168,7 +182,7 @@ export default function TypesScreen() {
           displayNameKa: formNameKa.trim(),
           displayNameEn: formNameEn.trim(),
           isActive: formIsActive,
-          sortOrder: Number.isFinite(sortOrderNumber) ? sortOrderNumber : 0,
+          sortOrder: sortOrderForCreate,
         });
         setWashTypes((prev) => [...prev, created]);
         setSuccess(t("admin.types.washCreated"));
@@ -178,7 +192,7 @@ export default function TypesScreen() {
           displayNameKa: formNameKa.trim(),
           displayNameEn: formNameEn.trim(),
           isActive: formIsActive,
-          sortOrder: Number.isFinite(sortOrderNumber) ? sortOrderNumber : 0,
+          sortOrder: sortOrderForUpdate,
         });
         setCarTypes((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
         setSuccess(t("admin.types.carUpdated"));
@@ -188,7 +202,7 @@ export default function TypesScreen() {
           displayNameKa: formNameKa.trim(),
           displayNameEn: formNameEn.trim(),
           isActive: formIsActive,
-          sortOrder: Number.isFinite(sortOrderNumber) ? sortOrderNumber : 0,
+          sortOrder: sortOrderForUpdate,
         });
         setWashTypes((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
         setSuccess(t("admin.types.washUpdated"));
@@ -200,10 +214,36 @@ export default function TypesScreen() {
         await deleteWashTypeConfig(token, id, pin);
         setWashTypes((prev) => prev.filter((t) => t.id !== id));
         setSuccess(t("admin.types.washDeleted"));
+      } else if (kind === "disable-car" && id) {
+        const updated = await updateCarTypeConfig(token, id, pin, { isActive: false });
+        setCarTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...updated, inUse: t.inUse } : t)));
+        setSuccess(t("admin.types.carDisabled"));
+      } else if (kind === "enable-car" && id) {
+        const updated = await updateCarTypeConfig(token, id, pin, { isActive: true });
+        setCarTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...updated, inUse: t.inUse } : t)));
+        setSuccess(t("admin.types.carEnabled"));
+      } else if (kind === "disable-wash" && id) {
+        const updated = await updateWashTypeConfig(token, id, pin, { isActive: false });
+        setWashTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...updated, inUse: t.inUse } : t)));
+        setSuccess(t("admin.types.washDisabled"));
+      } else if (kind === "enable-wash" && id) {
+        const updated = await updateWashTypeConfig(token, id, pin, { isActive: true });
+        setWashTypes((prev) => prev.map((t) => (t.id === updated.id ? { ...updated, inUse: t.inUse } : t)));
+        setSuccess(t("admin.types.washEnabled"));
       }
-      resetForm();
+      if (
+        kind === "create-car" ||
+        kind === "create-wash" ||
+        kind === "update-car" ||
+        kind === "update-wash" ||
+        kind === "delete-car" ||
+        kind === "delete-wash"
+      ) {
+        resetForm();
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.types.saveFailed"));
+      const msg = e instanceof Error ? e.message : t("admin.types.saveFailed");
+      setError(msg === "TYPE_IN_USE" ? t("admin.types.typeInUse") : msg);
     } finally {
       setLoading(false);
     }
@@ -226,11 +266,28 @@ export default function TypesScreen() {
           size={18}
           onPress={() => openEdit(kind, type)}
         />
-        <IconButton
-          icon="delete"
-          size={18}
-          onPress={() => confirmWithPin(kind === "car" ? "delete-car" : "delete-wash", type.id)}
-        />
+        {type.isActive ? (
+          <IconButton
+            icon="eye-off"
+            size={18}
+            onPress={() => confirmWithPin(kind === "car" ? "disable-car" : "disable-wash", type.id)}
+            accessibilityLabel={t("admin.types.disable")}
+          />
+        ) : (
+          <IconButton
+            icon="eye"
+            size={18}
+            onPress={() => confirmWithPin(kind === "car" ? "enable-car" : "enable-wash", type.id)}
+            accessibilityLabel={t("admin.types.enable")}
+          />
+        )}
+        {!type.inUse && (
+          <IconButton
+            icon="delete"
+            size={18}
+            onPress={() => confirmWithPin(kind === "car" ? "delete-car" : "delete-wash", type.id)}
+          />
+        )}
       </View>
     </View>
   );
@@ -350,14 +407,6 @@ export default function TypesScreen() {
                 label={t("admin.types.nameKa")}
                 value={formNameKa}
                 onChangeText={setFormNameKa}
-                style={styles.input}
-              />
-              <TextInput
-                mode="outlined"
-                label={t("admin.types.sortOrder")}
-                value={formSortOrder}
-                onChangeText={setFormSortOrder}
-                keyboardType="numeric"
                 style={styles.input}
               />
               <View style={styles.inlineRow}>

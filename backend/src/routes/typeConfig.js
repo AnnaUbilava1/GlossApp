@@ -37,8 +37,16 @@ router.get('/car', async (_req, res) => {
   try {
     const types = await prisma.carType.findMany({
       orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: { select: { vehicles: true, washRecords: true, pricing: true } },
+      },
     });
-    res.json({ types });
+    const typesWithUsage = types.map((t) => {
+      const { _count, ...rest } = t;
+      const inUse = (_count.vehicles + _count.washRecords + _count.pricing) > 0;
+      return { ...rest, inUse };
+    });
+    res.json({ types: typesWithUsage });
   } catch (error) {
     console.error('Get car types error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -63,8 +71,16 @@ router.get('/wash', async (_req, res) => {
   try {
     const types = await prisma.washType.findMany({
       orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: { select: { washRecords: true, pricing: true } },
+      },
     });
-    res.json({ types });
+    const typesWithUsage = types.map((t) => {
+      const { _count, ...rest } = t;
+      const inUse = (_count.washRecords + _count.pricing) > 0;
+      return { ...rest, inUse };
+    });
+    res.json({ types: typesWithUsage });
   } catch (error) {
     console.error('Get wash types error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -389,11 +405,29 @@ router.put(
  *       200:
  *         description: Deleted
  */
-router.delete('/car/:id',requireAdmin, async (req, res) => {
+router.delete('/car/:id', requireAdmin, async (req, res) => {
   try {
     if (!ensureMasterPin(req, res)) return;
 
     const { id } = req.params;
+    const carType = await prisma.carType.findUnique({
+      where: { id },
+      select: { code: true },
+    });
+    if (!carType) {
+      return res.status(404).json({ error: 'Car type not found' });
+    }
+    const [vehiclesCount, washRecordsCount, pricingCount] = await Promise.all([
+      prisma.vehicle.count({ where: { carCategory: carType.code } }),
+      prisma.washRecord.count({ where: { carCategory: carType.code } }),
+      prisma.pricing.count({ where: { carCategory: carType.code } }),
+    ]);
+    if (vehiclesCount > 0 || washRecordsCount > 0 || pricingCount > 0) {
+      return res.status(400).json({
+        error: 'TYPE_IN_USE',
+        message: 'This type is used by vehicles, records, or pricing and cannot be deleted. Disable it instead so it won\'t show in dropdowns.',
+      });
+    }
     await prisma.carType.delete({ where: { id } });
     res.json({ message: 'Car type deleted successfully' });
   } catch (error) {
@@ -435,11 +469,28 @@ router.delete('/car/:id',requireAdmin, async (req, res) => {
  *       200:
  *         description: Deleted
  */
-router.delete('/wash/:id',requireAdmin, async (req, res) => {
+router.delete('/wash/:id', requireAdmin, async (req, res) => {
   try {
     if (!ensureMasterPin(req, res)) return;
 
     const { id } = req.params;
+    const washType = await prisma.washType.findUnique({
+      where: { id },
+      select: { code: true },
+    });
+    if (!washType) {
+      return res.status(404).json({ error: 'Wash type not found' });
+    }
+    const [washRecordsCount, pricingCount] = await Promise.all([
+      prisma.washRecord.count({ where: { washType: washType.code } }),
+      prisma.pricing.count({ where: { washType: washType.code } }),
+    ]);
+    if (washRecordsCount > 0 || pricingCount > 0) {
+      return res.status(400).json({
+        error: 'TYPE_IN_USE',
+        message: 'This type is used by records or pricing and cannot be deleted. Disable it instead so it won\'t show in dropdowns.',
+      });
+    }
     await prisma.washType.delete({ where: { id } });
     res.json({ message: 'Wash type deleted successfully' });
   } catch (error) {
