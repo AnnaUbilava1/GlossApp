@@ -113,7 +113,7 @@ export default function LoginScreen() {
                 />
               </View>
 
-              {/* Language switcher + Forgot Password on same row */}
+              {/* Language switcher */}
               <View style={styles.actionsRow}>
                 <View style={styles.languageRow}>
                   <Button
@@ -133,17 +133,6 @@ export default function LoginScreen() {
                     English
                   </Button>
                 </View>
-
-                <Button
-                  mode="text"
-                  onPress={() => {
-                    // TODO: Implement forgot password
-                  }}
-                  labelStyle={styles.forgotPasswordText}
-                  compact
-                >
-                  {t("auth.forgotPassword")}
-                </Button>
               </View>
 
               {/* Sign In Button */}

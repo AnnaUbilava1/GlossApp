@@ -15,7 +15,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.emailPlaceholder": "name@example.com",
     "auth.password": "პაროლი",
     "auth.passwordPlaceholder": "შეიყვანეთ პაროლი",
-    "auth.forgotPassword": "დაგავიწყდათ პაროლი?",
     "auth.signIn": "შესვლა",
     "auth.loginFailed": "შესვლა ვერ მოხერხდა",
 
@@ -245,7 +244,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.emailPlaceholder": "name@example.com",
     "auth.password": "Password",
     "auth.passwordPlaceholder": "Enter your password",
-    "auth.forgotPassword": "Forgot password?",
     "auth.signIn": "Sign In",
     "auth.loginFailed": "Login failed",
 
