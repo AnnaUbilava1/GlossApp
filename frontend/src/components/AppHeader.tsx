@@ -53,20 +53,31 @@ export default function AppHeader({
       <View style={styles.rightSection}>
         <View style={styles.langRow}>
           <Button
-            mode={language === "ka" ? "contained-tonal" : "text"}
-            compact
-            onPress={() => setLanguage("ka")}
-            labelStyle={styles.langLabel}
-          >
-            ქართ
-          </Button>
-          <Button
-            mode={language === "en" ? "contained-tonal" : "text"}
+            mode={language === "en" ? "contained" : "text"}
             compact
             onPress={() => setLanguage("en")}
-            labelStyle={styles.langLabel}
+            style={styles.langButton}
+            contentStyle={styles.langButtonContent}
+            labelStyle={styles.langButtonLabel}
+            buttonColor={language === "en" ? "#2563EB" : "transparent"}
+            textColor={language === "en" ? "#EFF6FF" : "#1D4ED8"}
           >
-            EN
+            ENG
+          </Button>
+
+          <View style={styles.langDivider} />
+
+          <Button
+            mode={language === "ka" ? "contained" : "text"}
+            compact
+            onPress={() => setLanguage("ka")}
+            style={styles.langButton}
+            contentStyle={styles.langButtonContent}
+            labelStyle={styles.langButtonLabel}
+            buttonColor={language === "ka" ? "#2563EB" : "transparent"}
+            textColor={language === "ka" ? "#EFF6FF" : "#1D4ED8"}
+          >
+            ქარ
           </Button>
         </View>
         {showAdminButton && (
@@ -142,8 +153,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  langLabel: {
+  langButton: {
+    minWidth: 26,
+    borderRadius:8,
+  },
+  langButtonContent: {
+    paddingHorizontal: 2,
+  },
+  langButtonLabel: {
     fontSize: 12,
+    fontWeight: "500",
+    marginVertical: 5,
+  },
+  langDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: "rgba(37, 99, 235, 0.45)",
+    marginHorizontal: 4,
+    alignSelf: "center",
   },
   adminButton: {
     marginRight: 4,

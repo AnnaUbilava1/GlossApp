@@ -55,6 +55,36 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
+            <View style={styles.languageRow}>
+              <Button
+                mode={language === "en" ? "contained" : "text"}
+                compact
+                onPress={() => setLanguage("en")}
+                style={styles.langButton}
+                contentStyle={styles.langButtonContent}
+                labelStyle={styles.langButtonLabel}
+                buttonColor={language === "en" ? "#2563EB" : "transparent"}
+                textColor={language === "en" ? "#EFF6FF" : "#1D4ED8"}
+              >
+                ENG
+              </Button>
+
+              <View style={styles.langDivider} />
+
+              <Button
+                mode={language === "ka" ? "contained" : "text"}
+                compact
+                onPress={() => setLanguage("ka")}
+                style={styles.langButton}
+                contentStyle={styles.langButtonContent}
+                labelStyle={styles.langButtonLabel}
+                buttonColor={language === "ka" ? "#2563EB" : "transparent"}
+                textColor={language === "ka" ? "#EFF6FF" : "#1D4ED8"}
+              >
+                ქარ
+              </Button>
+            </View>
+
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logo}>
@@ -111,28 +141,6 @@ export default function LoginScreen() {
                   style={styles.input}
                   contentStyle={styles.inputContent}
                 />
-              </View>
-
-              {/* Language switcher */}
-              <View style={styles.actionsRow}>
-                <View style={styles.languageRow}>
-                  <Button
-                    mode={language === "ka" ? "contained" : "outlined"}
-                    compact
-                    onPress={() => setLanguage("ka")}
-                    style={styles.langButton}
-                  >
-                    ქართული
-                  </Button>
-                  <Button
-                    mode={language === "en" ? "contained" : "outlined"}
-                    compact
-                    onPress={() => setLanguage("en")}
-                    style={styles.langButton}
-                  >
-                    English
-                  </Button>
-                </View>
               </View>
 
               {/* Sign In Button */}
@@ -252,23 +260,28 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   languageRow: {
+    alignSelf: "flex-end",
     flexDirection: "row",
-    gap: 10,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 26,
+    gap: 6,
+    marginBottom: 12,
   },
   langButton: {
-    minWidth: 88,
-    borderRadius: 10,
+    minWidth: 20,
+    borderRadius: 8,
   },
-  forgotPasswordText: {
-    color: "#2F80ED",
-    fontSize: 14,
-    fontWeight: "600",
+  langButtonContent: {
+    paddingHorizontal: 2,
+  },
+  langButtonLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginVertical: 4,
+  },
+  langDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: "rgba(37, 99, 235, 0.45)",
+    alignSelf: "center",
   },
   signInButton: {
     backgroundColor: "#2F80ED",
