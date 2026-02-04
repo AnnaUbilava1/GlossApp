@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Dimensions, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 
 const { width } = Dimensions.get("window");
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
 
 interface AdminTab {
   key: string;
@@ -37,8 +39,8 @@ export default function AdminTabs({
     return icons[iconName] || "help-circle";
   };
 
-  return (
-    <View style={styles.container}>
+  const TabContent = (
+    <View style={[styles.container, isMobile && styles.containerMobile]}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
         return (
@@ -46,6 +48,8 @@ export default function AdminTabs({
             key={tab.key}
             style={[
               styles.tab,
+              isMobile && styles.tabMobile,
+              isTablet && styles.tabTablet,
               isActive && {
                 backgroundColor: "#E0E0E0",
                 borderBottomWidth: 2,
@@ -56,15 +60,17 @@ export default function AdminTabs({
           >
             <MaterialCommunityIcons
               name={getIconName(tab.icon) as any}
-              size={20}
+              size={isMobile ? 18 : 20}
               color={isActive ? theme.colors.primary : "#757575"}
             />
             <Text
-              variant="bodyMedium"
+              variant={isMobile ? "bodySmall" : isTablet ? "bodySmall" : "bodyMedium"}
               style={[
                 styles.tabText,
                 isActive && styles.activeTabText,
+                isMobile && styles.tabTextMobile,
               ]}
+              numberOfLines={1}
             >
               {tab.label}
             </Text>
@@ -73,15 +79,37 @@ export default function AdminTabs({
       })}
     </View>
   );
+
+  // On mobile, wrap in ScrollView for horizontal scrolling
+  if (isMobile) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {TabContent}
+      </ScrollView>
+    );
+  }
+
+  return TabContent;
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingBottom: 4,
+  },
   container: {
     flexDirection: "row",
     backgroundColor: "#F5F5F5",
     padding: 4,
     borderRadius: 8,
     marginBottom: 16,
+    minWidth: "100%",
+  },
+  containerMobile: {
+    minWidth: Math.max(width - 32, 500),
   },
   tab: {
     flex: 1,
@@ -92,10 +120,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     gap: 8,
+    minWidth: 80,
+  },
+  tabMobile: {
+    flex: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    minWidth: 90,
+  },
+  tabTablet: {
+    paddingHorizontal: 10,
   },
   tabText: {
     color: "#757575",
     fontWeight: "500",
+  },
+  tabTextMobile: {
+    fontSize: 11,
   },
   activeTabText: {
     color: "#2F80ED",

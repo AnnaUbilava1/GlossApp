@@ -33,7 +33,9 @@ import {
 } from "../../src/services/userService";
 
 const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
+const isDesktop = width >= 1024;
 
 export default function AppUsersScreen() {
   const theme = useTheme();
@@ -406,11 +408,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobile ? 12 : isTablet ? 20 : 24,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobile ? 16 : isTablet ? 24 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -421,10 +423,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   headerRow: {
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
+    alignItems: isMobile ? "flex-start" : "center",
+    marginBottom: isMobile ? 16 : 24,
+    gap: isMobile ? 12 : 0,
   },
   title: {
     fontWeight: "bold",
@@ -432,6 +435,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: "#2F80ED",
+    width: isMobile ? "100%" : "auto",
   },
   addButtonLabel: {
     color: "#FFFFFF",
@@ -471,7 +475,7 @@ const styles = StyleSheet.create({
   },
   mobileCard: {
     borderRadius: 8,
-    padding: 16,
+    padding: isMobile ? 12 : 16,
     backgroundColor: "#FAFAFA",
     marginBottom: 12,
   },
@@ -480,18 +484,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 8,
   },
   mobileEmail: {
     color: "#757575",
     marginBottom: 12,
   },
   mobileActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "center",
     gap: 8,
+    marginTop: isMobile ? 8 : 0,
   },
   resetButton: {
-    flex: 1,
+    flex: isMobile ? 0 : 1,
+    width: isMobile ? "100%" : "auto",
   },
   errorText: {
     color: "#D32F2F",

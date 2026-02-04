@@ -28,7 +28,9 @@ import {
 import MasterPinModal from "../../src/components/MasterPinModal";
 
 const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
+const isDesktop = width >= 1024;
 
 type EditTarget =
   | { kind: "car"; type: TypeConfig | null }
@@ -414,28 +416,33 @@ export default function TypesScreen() {
                   mode={formIsActive ? "contained" : "outlined"}
                   onPress={() => setFormIsActive(!formIsActive)}
                   compact
+                  style={isMobile ? { width: "100%" } : undefined}
                 >
                   {formIsActive
                     ? t("admin.types.active")
                     : t("admin.types.inactive")}
                 </Button>
-                <View style={{ flex: 1 }} />
-                <Button
-                  mode="text"
-                  onPress={resetForm}
-                  compact
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={() => handleSubmitForm(editTarget.kind)}
-                  loading={loading}
-                  disabled={loading}
-                  compact
-                >
-                  {t("common.save")}
-                </Button>
+                {!isMobile && <View style={{ flex: 1 }} />}
+                <View style={[styles.buttonRow, isMobile && styles.buttonRowMobile]}>
+                  <Button
+                    mode="text"
+                    onPress={resetForm}
+                    compact
+                    style={isMobile ? { flex: 1 } : undefined}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={() => handleSubmitForm(editTarget.kind)}
+                    loading={loading}
+                    disabled={loading}
+                    compact
+                    style={isMobile ? { flex: 1 } : undefined}
+                  >
+                    {t("common.save")}
+                  </Button>
+                </View>
               </View>
             </View>
           )}
@@ -481,11 +488,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobile ? 12 : isTablet ? 20 : 24,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobile ? 16 : isTablet ? 24 : 32,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -505,24 +512,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "flex-start" : "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    gap: isMobile ? 8 : 0,
   },
   sectionTitle: {
     fontWeight: "600",
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "flex-start" : "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: isMobile ? 12 : 8,
     borderBottomWidth: 1,
     borderBottomColor: "#EEEEEE",
+    gap: isMobile ? 8 : 0,
   },
   rowInfo: {
-    flex: 1,
+    flex: isMobile ? 0 : 1,
+    width: isMobile ? "100%" : "auto",
   },
   codeText: {
     fontWeight: "600",
@@ -540,6 +550,8 @@ const styles = StyleSheet.create({
   rowActions: {
     flexDirection: "row",
     alignItems: "center",
+    alignSelf: isMobile ? "flex-end" : "auto",
+    flexWrap: "wrap",
   },
   formCard: {
     marginTop: 24,
@@ -555,13 +567,21 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   inlineRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "center",
     marginTop: 8,
     gap: 8,
   },
   snackbar: {
     marginBottom: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  buttonRowMobile: {
+    width: "100%",
+    marginTop: 8,
   },
 });
 

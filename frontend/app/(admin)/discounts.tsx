@@ -30,7 +30,9 @@ import {
 import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
+const isDesktop = width >= 1024;
 
 export default function DiscountsScreen() {
   const theme = useTheme();
@@ -292,11 +294,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobile ? 12 : isTablet ? 20 : 24,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobile ? 16 : isTablet ? 24 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: isMobile ? 16 : 24,
   },
   title: {
     fontWeight: "bold",
@@ -345,13 +347,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
   },
   discountCardContent: {
-    padding: 16,
+    padding: isMobile ? 12 : 16,
   },
   discountCardHeader: {
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
     marginBottom: 12,
+    gap: isMobile ? 8 : 0,
   },
   discountInfo: {
     flex: 1,
@@ -361,6 +364,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 4,
+    flexWrap: "wrap",
   },
   discountName: {
     fontWeight: "600",
@@ -377,15 +381,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   discountPercentage: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     fontWeight: "bold",
     color: "#2F80ED",
+    alignSelf: isMobile ? "flex-start" : "auto",
   },
   discountActions: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: isMobile ? "flex-start" : "flex-end",
     gap: 8,
+    flexWrap: "wrap",
+    marginTop: isMobile ? 8 : 0,
   },
   toggleButton: {
     marginRight: 4,

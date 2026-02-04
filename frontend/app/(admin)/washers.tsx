@@ -33,7 +33,9 @@ import {
 import { MASTER_PIN } from "../../src/utils/constants";
 
 const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
+const isDesktop = width >= 1024;
 
 export default function WashersScreen() {
   const theme = useTheme();
@@ -352,11 +354,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobile ? 12 : isTablet ? 20 : 24,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobile ? 16 : isTablet ? 24 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -367,18 +369,20 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   headerRow: {
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
+    alignItems: isMobile ? "flex-start" : "center",
+    marginBottom: isMobile ? 16 : 24,
+    gap: isMobile ? 12 : 0,
   },
   title: {
     fontWeight: "bold",
     color: "#212121",
-    flex: 1,
+    flex: isMobile ? 0 : 1,
   },
   addButton: {
     backgroundColor: "#2F80ED",
+    width: isMobile ? "100%" : "auto",
   },
   addButtonLabel: {
     color: "#FFFFFF",
@@ -400,21 +404,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   washerItem: {
-    flexDirection: "row",
+    flexDirection: isMobile ? "column" : "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
+    alignItems: isMobile ? "flex-start" : "center",
+    padding: isMobile ? 12 : 16,
     backgroundColor: "#FAFAFA",
     borderRadius: 8,
     marginBottom: 8,
+    gap: isMobile ? 12 : 0,
   },
   washerItemInactive: {
     opacity: 0.6,
     backgroundColor: "#F5F5F5",
   },
   washerInfo: {
-    flex: 1,
-    marginRight: 8,
+    flex: isMobile ? 0 : 1,
+    marginRight: isMobile ? 0 : 8,
+    width: isMobile ? "100%" : "auto",
   },
   washerNameRow: {
     flexDirection: "row",
@@ -435,6 +441,8 @@ const styles = StyleSheet.create({
   washerActions: {
     flexDirection: "row",
     alignItems: "center",
+    alignSelf: isMobile ? "flex-start" : "auto",
+    flexWrap: "wrap",
   },
   snackbar: {
     marginBottom: 16,
