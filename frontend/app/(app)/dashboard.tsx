@@ -64,7 +64,7 @@ export default function DashboardScreen() {
   // Local filters for washer, payment method, and wash status
   const [washerFilter, setWasherFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "cash" | "card">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "unfinished" | "finished_unpaid" | "paid" | "unfinished_paid">("all");
+  const [statusFilter, setStatusFilter] = useState<Set<"all" | "paid" | "unpaid" | "finished" | "unfinished">>(new Set(["all"]));
 
   // Active washers for washer dropdown filter
   const [washers, setWashers] = useState<WasherOption[]>([]);
@@ -92,12 +92,25 @@ export default function DashboardScreen() {
           }
         }
 
-        if (statusFilter === "unfinished" && r.isFinished) return false;
-        if (statusFilter === "finished_unpaid" && !(r.isFinished && !r.isPaid)) return false;
-        if (statusFilter === "paid" && !r.isPaid) return false;
-        if (statusFilter === "unfinished_paid" && !(!r.isFinished && r.isPaid)) return false;
+        // Status filter: if "all" is selected, show everything
+        if (statusFilter.has("all") || statusFilter.size === 0) {
+          return true;
+        }
 
-        return true;
+        // Check payment status: if any payment filters are selected, record must match at least one
+        const hasPaymentFilter = statusFilter.has("paid") || statusFilter.has("unpaid");
+        const matchesPaymentFilter = !hasPaymentFilter || 
+          (statusFilter.has("paid") && r.isPaid) || 
+          (statusFilter.has("unpaid") && !r.isPaid);
+
+        // Check finish status: if any finish filters are selected, record must match at least one
+        const hasFinishFilter = statusFilter.has("finished") || statusFilter.has("unfinished");
+        const matchesFinishFilter = !hasFinishFilter || 
+          (statusFilter.has("finished") && r.isFinished) || 
+          (statusFilter.has("unfinished") && !r.isFinished);
+
+        // Record must match both payment and finish filters (AND logic across categories)
+        return matchesPaymentFilter && matchesFinishFilter;
       }),
     [records, washerFilter, paymentFilter, statusFilter]
   );

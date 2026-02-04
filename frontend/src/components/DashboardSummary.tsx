@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, TouchableOpacity, View, Dimensions } from "react-native";
-import { Menu, Text, TextInput, Button, Dialog, Portal } from "react-native-paper";
+import { StyleSheet, TouchableOpacity, View, Dimensions, ScrollView } from "react-native";
+import { Menu, Text, TextInput, Button, Dialog, Portal, Checkbox } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
 import { useLanguage } from "../context/LanguageContext";
 import { formatMoney } from "../utils/constants";
 
 type PaymentFilter = "all" | "cash" | "card";
-type StatusFilter = "all" | "unfinished" | "finished_unpaid" | "paid" | "unfinished_paid";
+type StatusFilterValue = "all" | "paid" | "unpaid" | "finished" | "unfinished";
+type StatusFilter = Set<StatusFilterValue>;
 
 type Props = {
   records: DashboardRecord[];
@@ -46,7 +47,7 @@ export default function DashboardSummary({
   // Temporary filter states for modal
   const [tempWasherFilter, setTempWasherFilter] = useState(washerFilter);
   const [tempPaymentFilter, setTempPaymentFilter] = useState(paymentFilter);
-  const [tempStatusFilter, setTempStatusFilter] = useState(statusFilter);
+  const [tempStatusFilter, setTempStatusFilter] = useState<StatusFilter>(new Set(statusFilter));
   const [tempStartDate, setTempStartDate] = useState(startDate);
   const [tempEndDate, setTempEndDate] = useState(endDate);
 
@@ -62,7 +63,7 @@ export default function DashboardSummary({
     if (modalVisible) {
       setTempWasherFilter(washerFilter);
       setTempPaymentFilter(paymentFilter);
-      setTempStatusFilter(statusFilter);
+      setTempStatusFilter(new Set(statusFilter));
       setTempStartDate(startDate);
       setTempEndDate(endDate);
     }
@@ -73,7 +74,7 @@ export default function DashboardSummary({
   const handleModalOK = () => {
     setWasherFilter(tempWasherFilter);
     setPaymentFilter(tempPaymentFilter);
-    setStatusFilter(tempStatusFilter);
+    setStatusFilter(new Set(tempStatusFilter));
     setStartDate(tempStartDate);
     setEndDate(tempEndDate);
     setModalVisible(false);
@@ -409,19 +410,52 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
   const anchorRef = React.useRef<View>(null);
   const [anchorPosition, setAnchorPosition] = React.useState({ x: 0, y: 0 });
 
-  const options: { value: StatusFilter; label: string }[] = [
+  const options: { value: StatusFilterValue; label: string }[] = [
     { value: "all", label: t("filters.all") },
-    { value: "unfinished", label: "Unfinished" },
-    { value: "finished_unpaid", label: "Finished unpaid" },
-    { value: "paid", label: "Paid" },
-    { value: "unfinished_paid", label: t("filters.unfinishedPaid") },
+    { value: "paid", label: t("filters.paid") },
+    { value: "unpaid", label: t("filters.unpaid") },
+    { value: "finished", label: t("filters.finished") },
+    { value: "unfinished", label: t("filters.unfinished") },
   ];
 
-  const displayLabel = options.find((o) => o.value === selected)?.label || t("filters.all");
+  const getDisplayLabel = () => {
+    if (selected.has("all") || selected.size === 0) {
+      return t("filters.all");
+    }
+    const selectedLabels = options
+      .filter((o) => selected.has(o.value))
+      .map((o) => o.label);
+    if (selectedLabels.length === 0) return t("filters.all");
+    if (selectedLabels.length <= 2) {
+      return selectedLabels.join(", ");
+    }
+    return `${selectedLabels.length} selected`;
+  };
 
-  const handleSelect = (value: StatusFilter) => {
-    onSelect(value);
-    setVisible(false);
+  const handleToggle = (value: StatusFilterValue) => {
+    const newSet = new Set(selected);
+    if (value === "all") {
+      // If "all" is clicked, toggle it and clear others
+      if (newSet.has("all")) {
+        newSet.clear();
+      } else {
+        newSet.clear();
+        newSet.add("all");
+      }
+    } else {
+      // Remove "all" if any specific option is selected
+      newSet.delete("all");
+      if (newSet.has(value)) {
+        newSet.delete(value);
+      } else {
+        newSet.add(value);
+      }
+      // If no specific options are selected, add "all"
+      if (newSet.size === 0) {
+        newSet.add("all");
+      }
+    }
+    onSelect(newSet);
   };
 
   const handleOpen = () => {
@@ -444,7 +478,7 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
         >
           <TextInput
             mode="outlined"
-            value={displayLabel}
+            value={getDisplayLabel()}
             editable={false}
             right={<TextInput.Icon icon="menu-down" />}
             style={styles.filterInput}
@@ -455,14 +489,23 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
         visible={visible}
         onDismiss={() => setVisible(false)}
         anchor={anchorPosition}
+        style={styles.statusMenu}
       >
-        {options.map((option) => (
-          <Menu.Item
-            key={option.value}
-            title={option.label}
-            onPress={() => handleSelect(option.value)}
-          />
-        ))}
+        <ScrollView style={styles.statusMenuScroll}>
+          {options.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={styles.statusMenuItem}
+              onPress={() => handleToggle(option.value)}
+            >
+              <Checkbox
+                status={selected.has(option.value) ? "checked" : "unchecked"}
+                onPress={() => handleToggle(option.value)}
+              />
+              <Text style={styles.statusMenuLabel}>{option.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </Menu>
     </>
   );
@@ -576,6 +619,22 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 16,
     alignItems: "stretch",
+  },
+  statusMenu: {
+    maxHeight: 300,
+  },
+  statusMenuScroll: {
+    maxHeight: 280,
+  },
+  statusMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  statusMenuLabel: {
+    marginLeft: 8,
+    fontSize: 16,
   },
 });
 
