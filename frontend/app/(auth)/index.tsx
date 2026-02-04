@@ -33,7 +33,7 @@ export default function LoginScreen() {
       const user = await auth.login(email, password);
       const role = user.role || "staff";
       if (role === "admin") {
-        router.replace("/(admin)");
+        router.replace("/(app)/dashboard");
       } else {
         router.replace("/(app)");
       }

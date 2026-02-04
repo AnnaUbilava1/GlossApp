@@ -9,7 +9,7 @@ export function useProtectedRoute() {
 
   useEffect(() => {
     // Wait until the router has resolved initial segments
-    if (!segments || segments.length === 0) {
+    if (!segments || !segments[0]) {
       return;
     }
 
@@ -30,7 +30,7 @@ export function useProtectedRoute() {
     if (inAuthGroup) {
       const role = user?.role || "staff";
       if (role === "admin") {
-        router.replace("/(admin)");
+        router.replace("/(app)/dashboard");
       } else {
         router.replace("/(app)");
       }
