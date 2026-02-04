@@ -88,6 +88,8 @@ export default function WashersScreen() {
       router.push("/(admin)/discounts");
     } else if (key === "washers") {
       // Already here
+    } else if (key === "types") {
+      router.push("/(admin)/types");
     } else if (key === "pricing") {
       router.push("/(admin)/pricing");
     } else if (key === "appusers") {
@@ -208,6 +210,7 @@ export default function WashersScreen() {
               { key: "companies", label: t("admin.companies"), icon: "companies" },
               { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
               { key: "washers", label: t("admin.washers"), icon: "washers" },
+              { key: "types", label: t("admin.types"), icon: "types" },
               { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}

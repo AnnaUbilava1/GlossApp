@@ -34,6 +34,11 @@ import {
   getCarTypeLabel,
   getServiceTypeLabel,
 } from "../../src/utils/constants";
+import {
+  type TypeConfig,
+  getCarTypeConfigs,
+  getWashTypeConfigs,
+} from "../../src/services/typeConfigService";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -71,6 +76,9 @@ export default function NewRecordScreen() {
   const [washers, setWashers] = useState<WasherOption[]>([]);
   const [selectedWasher, setSelectedWasher] = useState<WasherOption | null>(null);
 
+  const [carTypeConfigs, setCarTypeConfigs] = useState<TypeConfig[] | null>(null);
+  const [washTypeConfigs, setWashTypeConfigs] = useState<TypeConfig[] | null>(null);
+
   // Auto-filled pricing
   const [originalPrice, setOriginalPrice] = useState<number | null>(null);
   const [discountedPrice, setDiscountedPrice] = useState<number | null>(null);
@@ -96,18 +104,32 @@ export default function NewRecordScreen() {
 
   useEffect(() => {
     if (!auth.token) return;
-    setLoadingInit(true);
-    setError(null);
-    Promise.all([
-      apiFetch<{ washers: WasherOption[] }>("/api/washers", { token: auth.token }),
-      apiFetch<{ options: DiscountOption[] }>("/api/discount-options", { token: auth.token }),
-    ])
-      .then(([w, d]) => {
+    const fetchInit = async () => {
+      try {
+        setLoadingInit(true);
+        setError(null);
+        const [w, d, carCfg, washCfg] = await Promise.all([
+          apiFetch<{ washers: WasherOption[] }>("/api/washers", { token: auth.token }),
+          apiFetch<{ options: DiscountOption[] }>("/api/discount-options", { token: auth.token }),
+          getCarTypeConfigs(auth.token).catch(() => null),
+          getWashTypeConfigs(auth.token).catch(() => null),
+        ]);
         setWashers(w.washers);
         setDiscountOptions(d.options);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load form data"))
-      .finally(() => setLoadingInit(false));
+        if (Array.isArray(carCfg)) {
+          setCarTypeConfigs(carCfg);
+        }
+        if (Array.isArray(washCfg)) {
+          setWashTypeConfigs(washCfg);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load form data");
+      } finally {
+        setLoadingInit(false);
+      }
+    };
+
+    fetchInit();
   }, [auth.token]);
 
   const canQuote = Boolean(
@@ -271,6 +293,48 @@ export default function NewRecordScreen() {
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  const availableCarTypes = useMemo(() => {
+    const base = [...CAR_TYPES];
+    if (!carTypeConfigs) return base;
+
+    const activeKnown = carTypeConfigs
+      .filter((cfg) => cfg.isActive && base.includes(cfg.code as (typeof CAR_TYPES)[number]))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((cfg) => cfg.code);
+
+    const remaining = base.filter((c) => !activeKnown.includes(c));
+    return [...activeKnown, ...remaining];
+  }, [carTypeConfigs]);
+
+  const getCarTypeDisplayLabel = (code: string) => {
+    const cfg = carTypeConfigs?.find((c) => c.code === code);
+    if (cfg) {
+      return language === "en" ? cfg.displayNameEn : cfg.displayNameKa;
+    }
+    return getCarTypeLabel(code, language);
+  };
+
+  const availableWashTypes = useMemo(() => {
+    const base = [...SERVICE_TYPES];
+    if (!washTypeConfigs) return base;
+
+    const activeKnown = washTypeConfigs
+      .filter((cfg) => cfg.isActive && base.includes(cfg.code as (typeof SERVICE_TYPES)[number]))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((cfg) => cfg.code);
+
+    const remaining = base.filter((s) => !activeKnown.includes(s));
+    return [...activeKnown, ...remaining];
+  }, [washTypeConfigs]);
+
+  const getWashTypeDisplayLabel = (code: string) => {
+    const cfg = washTypeConfigs?.find((c) => c.code === code);
+    if (cfg) {
+      return language === "en" ? cfg.displayNameEn : cfg.displayNameKa;
+    }
+    return getServiceTypeLabel(code, language);
   };
 
 
@@ -507,10 +571,10 @@ export default function NewRecordScreen() {
                   <SearchableSelect
                     label={t("newRecord.carCategory")}
                     required
-                    valueText={carType ? getCarTypeLabel(carType, language) : ""}
-                    options={[...CAR_TYPES].map((c) => ({
+                    valueText={carType ? getCarTypeDisplayLabel(carType) : ""}
+                    options={availableCarTypes.map((c) => ({
                       key: c,
-                      label: getCarTypeLabel(c, language),
+                      label: getCarTypeDisplayLabel(c),
                     }))}
                     onSelect={(key) => setCarType(key)}
                   />
@@ -522,13 +586,13 @@ export default function NewRecordScreen() {
                       isCustomService
                         ? t("newRecord.customService")
                         : serviceType
-                        ? getServiceTypeLabel(serviceType, language)
+                        ? getWashTypeDisplayLabel(serviceType)
                         : ""
                     }
                     options={[
-                      ...SERVICE_TYPES.map((s) => ({
+                      ...availableWashTypes.map((s) => ({
                         key: s,
-                        label: getServiceTypeLabel(s, language),
+                        label: getWashTypeDisplayLabel(s),
                       })),
                       { key: "__CUSTOM__", label: t("newRecord.customService") },
                     ]}

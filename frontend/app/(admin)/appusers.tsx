@@ -92,6 +92,8 @@ export default function AppUsersScreen() {
       router.push("/(admin)/washers");
     } else if (key === "pricing") {
       router.push("/(admin)/pricing");
+    } else if (key === "types") {
+      router.push("/(admin)/types");
     } else if (key === "appusers") {
       // Already here
     }
@@ -126,6 +128,7 @@ export default function AppUsersScreen() {
               { key: "discounts", label: t("admin.discounts"), icon: "discounts" },
               { key: "washers", label: t("admin.washers"), icon: "washers" },
               { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "types", label: t("admin.types"), icon: "types" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}

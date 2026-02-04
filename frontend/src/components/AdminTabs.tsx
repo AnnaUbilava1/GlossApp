@@ -31,6 +31,7 @@ export default function AdminTabs({
       discounts: "percent-outline",
       washers: "account-group",
       pricing: "currency-usd",
+      types: "tune-variant",
       appusers: "account-multiple",
     };
     return icons[iconName] || "help-circle";

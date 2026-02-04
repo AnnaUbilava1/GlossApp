@@ -13,22 +13,7 @@ enum UserRole {
   staff
 }
 
-enum CarType {
-  SEDAN
-  PREMIUM_CLASS
-  SMALL_JEEP
-  BIG_JEEP
-  MICROBUS
-}
-
-enum WashType {
-  COMPLETE
-  INNER
-  OUTER
-  ENGINE
-  CHEMICAL
-  CUSTOM
-}
+// Car and wash types were previously enums. They are now modeled as relational tables.
 
 enum PaymentMethod {
   cash
@@ -67,10 +52,12 @@ model Company {
 model Vehicle {
   id            String   @id @default(uuid())
   licensePlate  String   @unique @map("licence_plate")
-  carCategory   CarType  @map("car_category")
+  // Schema car category code (e.g. SEDAN, PREMIUM_CLASS). FK to CarType.code
+  carCategory   String   @map("car_category")
   createdAt     DateTime @default(now()) @map("created_at")
 
   // Relations
+  carType    CarType    @relation(fields: [carCategory], references: [code])
   washRecords WashRecord[]
 
   @@map("vehicles")
@@ -88,15 +75,16 @@ model WashRecord {
   
   // Snapshot Data (preserved at time of transaction)
   licensePlate      String        @map("licence_plate") // snapshot
+  // Schema codes, FK to CarType.code and WashType.code
+  carCategory       String        @map("car_category") // snapshot
   companyName       String?       @map("company_name") // snapshot
   discountPercentage Int          @default(0) @map("discount_percentage") // snapshot
-  carCategory       CarType       @map("car_category") // snapshot
-  washType          WashType      @map("wash_type") // snapshot
   customServiceName String?       @map("custom_service_name") // snapshot - stores custom service name when washType is defaulted
   washerUsername    String        @map("washer_username") // snapshot
   boxNumber         Int           @default(0) @map("box_number")
   
   // Pricing Fields
+  washType          String        @map("wash_type") // snapshot
   originalPrice     Decimal       @db.Decimal(10, 2) @map("original_price")
   discountedPrice   Decimal       @db.Decimal(10, 2) @map("discounted_price")
   washerCut         Decimal       @db.Decimal(10, 2) @map("washer_cut")
@@ -113,6 +101,8 @@ model WashRecord {
   company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
   discount  Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
   createdBy User      @relation("CreatedBy", fields: [createdById], references: [id])
+  carType   CarType   @relation(fields: [carCategory], references: [code])
+  washTypeModel WashType @relation(fields: [washType], references: [code])
 
   @@map("wash_records")
 }
@@ -151,13 +141,58 @@ model Discount {
 
 model Pricing {
   id          String      @id @default(uuid())
-  carCategory CarType     @map("car_category")
-  washType    WashType    @map("wash_type")
+  // Schema codes, FK to CarType.code and WashType.code
+  carCategory String      @map("car_category")
+  washType    String      @map("wash_type")
   price       Decimal     @db.Decimal(10, 2)
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
+  carType   CarType   @relation(fields: [carCategory], references: [code])
+  washTypeModel WashType @relation(fields: [washType], references: [code])
+
   @@unique([carCategory, washType])
   @@map("price_list")
 }
+
+/// Car type lookup table (replaces CarType enum). Also carries display labels/config for the app.
+model CarType {
+  id            String   @id @default(uuid())
+//Internal code, typically matching the schema enum (e.g. SEDAN, PREMIUM_CLASS).
+//We keep this separate so we can later support non-enum/custom codes if needed.
+  code          String   @unique
+  displayNameKa String
+  displayNameEn String
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  vehicles   Vehicle[]
+  washRecords WashRecord[]
+  pricing    Pricing[]
+
+  @@map("car_type_config")
+}
+
+/// Wash type lookup table (replaces WashType enum). Also carries display labels/config for the app.
+model WashType {
+  id            String   @id @default(uuid())
+//Internal code, typically matching the schema enum (e.g. COMPLETE, OUTER, INNER).
+  code          String   @unique
+  displayNameKa String
+  displayNameEn String
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  washRecords WashRecord[]
+  pricing     Pricing[]
+
+  @@map("wash_type_config")
+}
+
 

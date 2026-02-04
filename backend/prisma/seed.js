@@ -50,16 +50,60 @@ async function main() {
   }
   console.log('✅ Created washers');
 
-  // Create default pricing matrix
+  // Seed car types (schema codes + default display names)
   const carTypes = ['SEDAN', 'PREMIUM_CLASS', 'SMALL_JEEP', 'BIG_JEEP', 'MICROBUS'];
-  const washTypes = ['OUTER', 'INNER', 'COMPLETE', 'ENGINE', 'CHEMICAL'];
-  const defaultPrices = {
-    SEDAN: { OUTER: 17, INNER: 17, COMPLETE: 30, ENGINE: 60, CHEMICAL: 400 },
-    PREMIUM_CLASS: { OUTER: 18, INNER: 18, COMPLETE: 32, ENGINE: 70, CHEMICAL: 450 },
-    SMALL_JEEP: { OUTER: 20, INNER: 20, COMPLETE: 35, ENGINE: 80, CHEMICAL: 500 },
-    BIG_JEEP: { OUTER: 25, INNER: 25, COMPLETE: 40, ENGINE: 90, CHEMICAL: 550 },
-    MICROBUS: { OUTER: 40, INNER: 40, COMPLETE: 65, ENGINE: 100, CHEMICAL: 600 },
+  const carTypeLabels = {
+    SEDAN: { ka: 'სედანი', en: 'Sedan' },
+    PREMIUM_CLASS: { ka: 'პრემიუმ კლასი', en: 'Premium' },
+    SMALL_JEEP: { ka: 'ჯიპი', en: 'Jeep' },
+    BIG_JEEP: { ka: 'დიდი ჯიპი', en: 'Big Jeep' },
+    MICROBUS: { ka: 'მინივენი', en: 'Minivan' },
   };
+
+  for (const code of carTypes) {
+    const labels = carTypeLabels[code];
+    await prisma.carType.upsert({
+      where: { code },
+      update: {},
+      create: {
+        code,
+        displayNameKa: labels.ka,
+        displayNameEn: labels.en,
+        isActive: true,
+        sortOrder: 0,
+      },
+    });
+  }
+  console.log('✅ Seeded car types');
+
+  // Seed wash types (schema codes + default display names)
+  const washTypes = ['COMPLETE', 'OUTER', 'INNER', 'ENGINE', 'CHEMICAL', 'CUSTOM'];
+  const washTypeLabels = {
+    COMPLETE: { ka: 'სრული რეცხვა', en: 'Complete Wash' },
+    OUTER: { ka: 'გარე რეცხვა', en: 'Outer Wash' },
+    INNER: { ka: 'სალონის რეცხვა', en: 'Interior Wash' },
+    ENGINE: { ka: 'ძრავის რეცხვა', en: 'Engine Wash' },
+    CHEMICAL: { ka: 'ქიმიური რეცხვა', en: 'Chemical Wash' },
+    CUSTOM: { ka: 'სხვა სერვისი', en: 'Custom Service' },
+  };
+
+  for (const code of washTypes) {
+    const labels = washTypeLabels[code];
+    await prisma.washType.upsert({
+      where: { code },
+      update: {},
+      create: {
+        code,
+        displayNameKa: labels.ka,
+        displayNameEn: labels.en,
+        isActive: code !== 'CUSTOM', // CUSTOM is available but typically hidden
+        sortOrder: 0,
+      },
+    });
+  }
+  console.log('✅ Seeded wash types');
+
+
 
   for (const carCategory of carTypes) {
     for (const washType of washTypes) {
