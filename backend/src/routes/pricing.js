@@ -2,12 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import {
-  LEGACY_CAR_TYPE_TO_SCHEMA,
-  LEGACY_SERVICE_TYPE_TO_SCHEMA,
-  SCHEMA_CAR_TYPE_TO_LEGACY,
-  SCHEMA_WASH_TYPE_TO_LEGACY,
-} from '../utils/legacyMappings.js';
+import { LEGACY_CAR_TYPE_TO_SCHEMA, LEGACY_SERVICE_TYPE_TO_SCHEMA } from '../utils/legacyMappings.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -54,19 +49,32 @@ router.get('/quote', async (req, res) => {
   try {
     const carType = req.query.carType ? String(req.query.carType) : null;
     const serviceType = req.query.serviceType ? String(req.query.serviceType) : null;
+    const carCategoryParam = req.query.carCategory ? String(req.query.carCategory) : null;
+    const washTypeParam = req.query.washType ? String(req.query.washType) : null;
     const discountPercent = req.query.discountPercent ? Number(req.query.discountPercent) : 0;
     const washerId = req.query.washerId ? Number(req.query.washerId) : null;
     const washerUsername = req.query.washerUsername ? String(req.query.washerUsername) : null;
 
-    if (!carType || !serviceType) {
-      return res.status(400).json({ error: 'carType and serviceType are required' });
+    const hasLegacy = carType && serviceType;
+    const hasSchema = carCategoryParam && washTypeParam;
+    if (!hasLegacy && !hasSchema) {
+      return res.status(400).json({ error: 'carType and serviceType (or carCategory and washType) are required' });
     }
     if (!washerId && !washerUsername) {
       return res.status(400).json({ error: 'washerId or washerUsername is required' });
     }
 
-    const carCategory = LEGACY_CAR_TYPE_TO_SCHEMA[carType];
-    const washType = LEGACY_SERVICE_TYPE_TO_SCHEMA[serviceType];
+    let carCategory = carCategoryParam || LEGACY_CAR_TYPE_TO_SCHEMA[carType];
+    let washType = washTypeParam || LEGACY_SERVICE_TYPE_TO_SCHEMA[serviceType];
+
+    if (hasSchema) {
+      const carExists = await prisma.carType.findUnique({ where: { code: carCategoryParam }, select: { code: true } });
+      const washExists = await prisma.washType.findUnique({ where: { code: washTypeParam }, select: { code: true } });
+      if (!carExists) return res.status(400).json({ error: `Unsupported carCategory: ${carCategoryParam}` });
+      if (!washExists) return res.status(400).json({ error: `Unsupported washType: ${washTypeParam}` });
+      carCategory = carCategoryParam;
+      washType = washTypeParam;
+    }
 
     if (!carCategory) return res.status(400).json({ error: `Unsupported carType: ${carType}` });
     if (!washType) return res.status(400).json({ error: `Unsupported serviceType: ${serviceType}` });
@@ -78,7 +86,7 @@ router.get('/quote', async (req, res) => {
 
     if (!pricing) {
       console.error(`Pricing not found for carCategory: ${carCategory}, washType: ${washType}`);
-      return res.status(404).json({ error: `Pricing not found for ${carType} × ${serviceType}` });
+      return res.status(404).json({ error: `Pricing not found for ${carCategory} × ${washType}` });
     }
 
     // Convert Prisma Decimal to number properly
@@ -88,7 +96,7 @@ router.get('/quote', async (req, res) => {
     
     if (isNaN(priceValue) || priceValue <= 0) {
       console.error(`Invalid price value: ${pricing.price} (string: ${priceStr}, converted: ${priceValue}) for carCategory: ${carCategory}, washType: ${washType}`);
-      return res.status(404).json({ error: `Invalid pricing for ${carType} × ${serviceType}. Please configure pricing in admin panel.` });
+      return res.status(404).json({ error: `Invalid pricing for ${carCategory} × ${washType}. Please configure pricing in admin panel.` });
     }
 
     const originalPrice = priceValue;
@@ -105,8 +113,10 @@ router.get('/quote', async (req, res) => {
     const washerCut = Math.max(0, originalPrice * ((Number(washer.salaryPercentage) || 0) / 100));
 
     res.json({
-      carType,
-      serviceType,
+      carType: carType || carCategory,
+      serviceType: serviceType || washType,
+      carCategory,
+      washType,
       discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
       originalPrice,
       discountedPrice,
@@ -145,23 +155,14 @@ router.get('/', async (req, res) => {
       },
     });
 
-    // Convert to legacy format for frontend
+    // Return matrix keyed by schema codes (carCategory, washType) so admin-added types appear
     const matrix = {};
     allPricing.forEach((entry) => {
-      const legacyCarType = SCHEMA_CAR_TYPE_TO_LEGACY[entry.carCategory];
-      const legacyServiceType = SCHEMA_WASH_TYPE_TO_LEGACY[entry.washType];
-
-      if (!legacyCarType || !legacyServiceType) {
-        return; // Skip unmapped entries
+      if (!matrix[entry.carCategory]) {
+        matrix[entry.carCategory] = {};
       }
-
-      if (!matrix[legacyCarType]) {
-        matrix[legacyCarType] = {};
-      }
-
-      // Convert Prisma Decimal to number via string conversion
       const priceValue = parseFloat(entry.price.toString());
-      matrix[legacyCarType][legacyServiceType] = priceValue;
+      matrix[entry.carCategory][entry.washType] = priceValue;
     });
 
     res.json({ matrix });
@@ -241,27 +242,28 @@ router.put(
       const updates = [];
       let updateCount = 0;
 
-      // Convert legacy names to schema enums and prepare updates
-      for (const legacyCarType in matrix) {
-        const carCategory = LEGACY_CAR_TYPE_TO_SCHEMA[legacyCarType];
-        if (!carCategory) {
-          console.warn(`Skipping unmapped carType: ${legacyCarType}`);
+      const validCarCodes = new Set((await prisma.carType.findMany({ select: { code: true } })).map((t) => t.code));
+      const validWashCodes = new Set((await prisma.washType.findMany({ select: { code: true } })).map((t) => t.code));
+
+      for (const carCategory of Object.keys(matrix)) {
+        if (!validCarCodes.has(carCategory)) {
+          console.warn(`Skipping unknown carCategory: ${carCategory}`);
           continue;
         }
+        const row = matrix[carCategory];
+        if (typeof row !== 'object' || row === null) continue;
 
-        for (const legacyServiceType in matrix[legacyCarType]) {
-          const washType = LEGACY_SERVICE_TYPE_TO_SCHEMA[legacyServiceType];
-          if (!washType) {
-            console.warn(`Skipping unmapped serviceType: ${legacyServiceType}`);
+        for (const washType of Object.keys(row)) {
+          if (washType === 'CUSTOM') continue;
+          if (!validWashCodes.has(washType)) {
+            console.warn(`Skipping unknown washType: ${washType}`);
             continue;
           }
-
-          const price = Number(matrix[legacyCarType][legacyServiceType]);
+          const price = Number(row[washType]);
           if (price < 0 || !Number.isFinite(price)) {
-            console.warn(`Skipping invalid price: ${price} for ${legacyCarType} × ${legacyServiceType}`);
-            continue; // Skip invalid prices (already validated, but double-check)
+            console.warn(`Skipping invalid price: ${price} for ${carCategory} × ${washType}`);
+            continue;
           }
-
           updateCount++;
           updates.push(
             prisma.pricing.upsert({
@@ -271,14 +273,8 @@ router.put(
                   washType,
                 },
               },
-              update: {
-                price,
-              },
-              create: {
-                carCategory,
-                washType,
-                price,
-              },
+              update: { price },
+              create: { carCategory, washType, price },
             })
           );
         }

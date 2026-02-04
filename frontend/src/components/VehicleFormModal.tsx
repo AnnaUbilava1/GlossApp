@@ -9,13 +9,14 @@ import {
   Text,
   TextInput,
 } from "react-native-paper";
-import type { CarType } from "../utils/types";
-import { CAR_TYPES } from "../utils/constants";
+import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
+import { getCarTypeConfigs, type TypeConfig } from "../services/typeConfigService";
 import type { Vehicle, CreateVehiclePayload, UpdateVehiclePayload } from "../services/vehicleService";
 
 type VehicleFormValues = {
   licensePlate: string;
-  carType: CarType;
+  carType: string;
 };
 
 type VehicleFormModalProps = {
@@ -31,30 +32,44 @@ export default function VehicleFormModal({
   onSave,
   editingVehicle,
 }: VehicleFormModalProps) {
+  const { token } = useAuth();
+  const { language } = useLanguage();
   const isEditing = Boolean(editingVehicle);
+  const [carTypeConfigs, setCarTypeConfigs] = useState<TypeConfig[]>([]);
   const [values, setValues] = useState<VehicleFormValues>({
     licensePlate: "",
-    carType: "Sedan",
+    carType: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible && token) {
+      getCarTypeConfigs(token)
+        .then((configs) => {
+          setCarTypeConfigs(configs.filter((c) => c.isActive).sort((a, b) => a.sortOrder - b.sortOrder));
+        })
+        .catch(() => {});
+    }
+  }, [visible, token]);
 
   useEffect(() => {
     if (visible) {
       if (editingVehicle) {
         setValues({
           licensePlate: editingVehicle.licensePlate,
-          carType: editingVehicle.carCategory as CarType,
+          carType: editingVehicle.carCategory,
         });
       } else {
+        const firstCode = carTypeConfigs.length > 0 ? carTypeConfigs[0].code : "";
         setValues({
           licensePlate: "",
-          carType: "Sedan",
+          carType: firstCode,
         });
       }
       setError(null);
     }
-  }, [visible, editingVehicle]);
+  }, [visible, editingVehicle, carTypeConfigs]);
 
   const validate = (): string | null => {
     if (!values.licensePlate.trim()) {
@@ -79,7 +94,7 @@ export default function VehicleFormModal({
     try {
       const payload: CreateVehiclePayload | UpdateVehiclePayload = {
         licensePlate: values.licensePlate.trim(),
-        carType: values.carType,
+        carType: values.carType as string,
       };
 
       await onSave(payload);
@@ -109,14 +124,14 @@ export default function VehicleFormModal({
             Car Type *
           </Text>
           <RadioButton.Group
-            onValueChange={(value) => setValues({ ...values, carType: value as CarType })}
+            onValueChange={(value) => setValues({ ...values, carType: value })}
             value={values.carType}
           >
-            {CAR_TYPES.map((carType) => (
+            {carTypeConfigs.map((c) => (
               <RadioButton.Item
-                key={carType}
-                label={carType}
-                value={carType}
+                key={c.code}
+                label={language === "en" ? c.displayNameEn : c.displayNameKa}
+                value={c.code}
                 style={styles.radioItem}
               />
             ))}

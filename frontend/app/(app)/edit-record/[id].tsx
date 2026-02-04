@@ -23,8 +23,13 @@ import AppHeader from "../../../src/components/AppHeader";
 import LicenseAutocomplete from "../../../src/components/LicenseAutocomplete";
 import MasterPinModal from "../../../src/components/MasterPinModal";
 import { useAuth } from "../../../src/context/AuthContext";
+import { useLanguage } from "../../../src/context/LanguageContext";
 import { apiFetch } from "../../../src/utils/api";
-import { CAR_TYPES, SERVICE_TYPES } from "../../../src/utils/constants";
+import {
+  type TypeConfig,
+  getCarTypeConfigs,
+  getWashTypeConfigs,
+} from "../../../src/services/typeConfigService";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
@@ -65,6 +70,7 @@ type RawRecord = {
   washerId: number;
   washerUsername: string;
   boxNumber: number;
+  carCategory?: string;
   washType?: string;
   customServiceName?: string | null;
   [key: string]: unknown;
@@ -93,7 +99,10 @@ export default function EditRecordScreen() {
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountOption | null>(null);
   const [washers, setWashers] = useState<WasherOption[]>([]);
   const [selectedWasher, setSelectedWasher] = useState<WasherOption | null>(null);
+  const [carTypeConfigs, setCarTypeConfigs] = useState<TypeConfig[]>([]);
+  const [washTypeConfigs, setWashTypeConfigs] = useState<TypeConfig[]>([]);
 
+  const { language } = useLanguage();
   const [showPinModal, setShowPinModal] = useState(false);
 
   useEffect(() => {
@@ -115,15 +124,15 @@ export default function EditRecordScreen() {
       setRecord(data.record);
       setRawRecord(data.rawRecord);
       setLicensePlate(data.record.licenseNumber);
-      setCarType(data.record.carType || "");
       const raw = data.rawRecord as RawRecord;
-      const isCustom = raw?.washType === "CUSTOM" || (data.record.serviceType && !(SERVICE_TYPES as readonly string[]).includes(data.record.serviceType));
+      setCarType(raw?.carCategory ?? data.record.carType ?? "");
+      const isCustom = raw?.washType === "CUSTOM";
       setIsCustomService(!!isCustom);
       if (isCustom && raw?.customServiceName) {
         setCustomServiceName(raw.customServiceName);
         setServiceType("");
       } else {
-        setServiceType(data.record.serviceType || "");
+        setServiceType(raw?.washType ?? data.record.serviceType ?? "");
         setCustomServiceName("");
       }
       setManualPrice(data.record.price != null ? String(data.record.price) : "");
@@ -140,10 +149,14 @@ export default function EditRecordScreen() {
     Promise.all([
       apiFetch<{ washers: WasherOption[] }>("/api/washers", { token: auth.token }),
       apiFetch<{ options: DiscountOption[] }>("/api/discount-options", { token: auth.token }),
+      getCarTypeConfigs(auth.token),
+      getWashTypeConfigs(auth.token),
     ])
-      .then(([w, d]) => {
+      .then(([w, d, cars, washes]) => {
         setWashers(w.washers);
         setDiscountOptions(d.options);
+        setCarTypeConfigs(cars);
+        setWashTypeConfigs(washes);
       })
       .catch(() => {});
   }, [auth.token]);
@@ -184,7 +197,6 @@ export default function EditRecordScreen() {
       setError("Custom service name and price are required");
       return;
     }
-    const effectiveServiceType = isCustomService ? customServiceName.trim() : serviceType;
     const pricePayload = isCustomService && manualPrice.trim() ? { price: parseFloat(manualPrice) || 0 } : {};
     setSubmitLoading(true);
     setError(null);
@@ -195,8 +207,9 @@ export default function EditRecordScreen() {
         body: JSON.stringify({
           masterPin: pin,
           licenseNumber: licensePlate.trim(),
-          carType,
-          serviceType: effectiveServiceType,
+          carCategory: carType,
+          washType: isCustomService ? "CUSTOM" : serviceType,
+          ...(isCustomService && { customServiceName: customServiceName.trim() }),
           companyId: selectedDiscount.companyId ?? undefined,
           discountPercent: selectedDiscount.discountPercent,
           washerId: selectedWasher.id,
@@ -401,16 +414,48 @@ export default function EditRecordScreen() {
                 <SearchableSelect
                   label="Car Category"
                   required
-                  valueText={carType}
-                  options={[...CAR_TYPES].map((c) => ({ key: c, label: c }))}
+                  valueText={
+                    carType
+                      ? (carTypeConfigs.find((c) => c.code === carType)
+                          ? language === "en"
+                            ? carTypeConfigs.find((c) => c.code === carType)!.displayNameEn
+                            : carTypeConfigs.find((c) => c.code === carType)!.displayNameKa
+                          : carType)
+                      : ""
+                  }
+                  options={[
+                    ...carTypeConfigs
+                      .filter((c) => c.isActive)
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .map((c) => ({
+                        key: c.code,
+                        label: language === "en" ? c.displayNameEn : c.displayNameKa,
+                      })),
+                  ]}
                   onSelect={setCarType}
                 />
                 <SearchableSelect
                   label="Wash Type"
                   required
-                  valueText={isCustomService ? "Custom Service" : serviceType}
+                  valueText={
+                    isCustomService
+                      ? "Custom Service"
+                      : serviceType
+                        ? (washTypeConfigs.find((w) => w.code === serviceType)
+                            ? language === "en"
+                              ? washTypeConfigs.find((w) => w.code === serviceType)!.displayNameEn
+                              : washTypeConfigs.find((w) => w.code === serviceType)!.displayNameKa
+                            : serviceType)
+                        : ""
+                  }
                   options={[
-                    ...SERVICE_TYPES.map((s) => ({ key: s, label: s })),
+                    ...washTypeConfigs
+                      .filter((w) => w.isActive && w.code !== "CUSTOM")
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .map((w) => ({
+                        key: w.code,
+                        label: language === "en" ? w.displayNameEn : w.displayNameKa,
+                      })),
                     { key: "__CUSTOM__", label: "Custom Service" },
                   ]}
                   onSelect={(key) => {

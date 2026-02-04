@@ -1,5 +1,4 @@
 import { apiFetch } from "../utils/api";
-import type { CarType } from "../utils/types";
 
 export type VehicleSearchResult = {
   id: string;
@@ -24,14 +23,15 @@ export type VehiclesResponse = {
   };
 };
 
+/** carType: schema code from admin types (e.g. SEDAN, VAN) or legacy name for backward compat */
 export type CreateVehiclePayload = {
   licensePlate: string;
-  carType: CarType;
+  carType: string;
 };
 
 export type UpdateVehiclePayload = {
   licensePlate?: string;
-  carType?: CarType;
+  carType?: string;
 };
 
 /**

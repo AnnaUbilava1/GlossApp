@@ -23,7 +23,21 @@ function toDecimalString(value) {
   return num.toFixed(2);
 }
 
-function recordToLegacy(record, lang = 'ka') {
+async function getTypeLabels(prismaClient, lang = 'ka') {
+  const [carTypes, washTypes] = await Promise.all([
+    prismaClient.carType.findMany({ select: { code: true, displayNameKa: true, displayNameEn: true } }),
+    prismaClient.washType.findMany({ select: { code: true, displayNameKa: true, displayNameEn: true } }),
+  ]);
+  const carLabels = Object.fromEntries(
+    carTypes.map((t) => [t.code, lang === 'en' ? t.displayNameEn : t.displayNameKa])
+  );
+  const washLabels = Object.fromEntries(
+    washTypes.map((t) => [t.code, lang === 'en' ? t.displayNameEn : t.displayNameKa])
+  );
+  return { carLabels, washLabels };
+}
+
+function recordToLegacy(record, lang = 'ka', typeLabels = null) {
   const discountPercent = record.discountPercentage ?? 0;
   
   // Prisma Decimal fields need to be converted properly
@@ -51,12 +65,11 @@ function recordToLegacy(record, lang = 'ka') {
   const isFinished = Boolean(record.endTime);
   const isPaid = Boolean(record.paymentMethod);
 
-  // Localized labels for enums from the database
-  const carType = getCarTypeLabel(record.carCategory, lang);
-  // Use custom service name if available, otherwise map enum to localized name
+  const carType =
+    typeLabels?.carLabels?.[record.carCategory] ?? getCarTypeLabel(record.carCategory, lang);
   const serviceType =
     record.customServiceName ||
-    getWashTypeLabel(record.washType, lang);
+    (typeLabels?.washLabels?.[record.washType] ?? getWashTypeLabel(record.washType, lang));
 
   const companyName = record.companyName || record.company?.name || null;
   const companyDiscount =
@@ -286,7 +299,8 @@ router.get('/', async (req, res) => {
       take: parseInt(limit),
     });
 
-    res.json({ records: records.map((r) => recordToLegacy(r, lang)), rawRecords: records });
+    const typeLabels = await getTypeLabels(prisma, lang);
+    res.json({ records: records.map((r) => recordToLegacy(r, lang, typeLabels)), rawRecords: records });
   } catch (error) {
     console.error('Get records error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -352,7 +366,8 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Record not found' });
     }
 
-    res.json({ record: recordToLegacy(record, lang), rawRecord: record });
+    const typeLabels = await getTypeLabels(prisma, lang);
+    res.json({ record: recordToLegacy(record, lang, typeLabels), rawRecord: record });
   } catch (error) {
     console.error('Get record error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -598,7 +613,8 @@ router.post(
         },
       });
 
-      res.status(201).json({ record: recordToLegacy(record, lang), rawRecord: record });
+      const typeLabels = await getTypeLabels(prisma, lang);
+      res.status(201).json({ record: recordToLegacy(record, lang, typeLabels), rawRecord: record });
     } catch (error) {
       console.error('Create record error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -657,7 +673,8 @@ router.post('/:id/finish', async (req, res) => {
       data: { endTime: new Date() },
     });
 
-    res.json({ message: 'Record marked as finished', record: recordToLegacy(record) });
+    const typeLabels = await getTypeLabels(prisma, 'ka');
+    res.json({ message: 'Record marked as finished', record: recordToLegacy(record, 'ka', typeLabels) });
   } catch (error) {
     console.error('Finish record error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -738,7 +755,8 @@ router.post(
         data: { paymentMethod },
       });
 
-      res.json({ message: 'Record marked as paid', record: recordToLegacy(record) });
+      const typeLabels = await getTypeLabels(prisma, lang);
+      res.json({ message: 'Record marked as paid', record: recordToLegacy(record, lang, typeLabels) });
     } catch (error) {
       console.error('Mark record paid error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -1020,7 +1038,8 @@ router.put(
         },
       });
 
-      res.json({ record: recordToLegacy(record, lang), rawRecord: record });
+      const typeLabels = await getTypeLabels(prisma, lang);
+      res.json({ record: recordToLegacy(record, lang, typeLabels), rawRecord: record });
     } catch (error) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Record not found' });

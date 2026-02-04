@@ -33,6 +33,8 @@ import {
   formatMoney,
   getCarTypeLabel,
   getServiceTypeLabel,
+  SCHEMA_CAR_TYPE_TO_LEGACY,
+  SCHEMA_WASH_TYPE_TO_LEGACY,
 } from "../../src/utils/constants";
 import {
   type TypeConfig,
@@ -103,16 +105,17 @@ export default function NewRecordScreen() {
   }, [auth.token]);
 
   useEffect(() => {
-    if (!auth.token) return;
+    const token = auth.token;
+    if (!token) return;
     const fetchInit = async () => {
       try {
         setLoadingInit(true);
         setError(null);
         const [w, d, carCfg, washCfg] = await Promise.all([
-          apiFetch<{ washers: WasherOption[] }>("/api/washers", { token: auth.token }),
-          apiFetch<{ options: DiscountOption[] }>("/api/discount-options", { token: auth.token }),
-          getCarTypeConfigs(auth.token).catch(() => null),
-          getWashTypeConfigs(auth.token).catch(() => null),
+          apiFetch<{ washers: WasherOption[] }>("/api/washers", { token }),
+          apiFetch<{ options: DiscountOption[] }>("/api/discount-options", { token }),
+          getCarTypeConfigs(token).catch(() => null),
+          getWashTypeConfigs(token).catch(() => null),
         ]);
         setWashers(w.washers);
         setDiscountOptions(d.options);
@@ -194,8 +197,8 @@ export default function NewRecordScreen() {
     setLoadingQuote(true);
     setError(null);
     const params = new URLSearchParams({
-      carType,
-      serviceType,
+      carCategory: carType,
+      washType: serviceType,
       discountPercent: String(selectedDiscount?.discountPercent ?? 0),
       washerId: String(selectedWasher?.id ?? ""),
     });
@@ -262,13 +265,16 @@ export default function NewRecordScreen() {
     try {
       const requestBody: any = {
         licenseNumber: licensePlate.trim(),
-        carType,
-        serviceType: isCustomService ? customServiceName.trim() : serviceType,
+        carCategory: carType,
+        washType: isCustomService ? "CUSTOM" : serviceType,
         washerId: selectedWasher.id,
         companyId: selectedDiscount.companyId || undefined,
         discountPercent: selectedDiscount.discountPercent,
         boxNumber: boxNum,
       };
+      if (isCustomService) {
+        requestBody.customServiceName = customServiceName.trim();
+      }
 
       // If custom service, always include manual price (required for backend to detect custom service)
       if (isCustomService) {
@@ -296,16 +302,14 @@ export default function NewRecordScreen() {
   };
 
   const availableCarTypes = useMemo(() => {
-    const base = [...CAR_TYPES];
-    if (!carTypeConfigs) return base;
-
-    const activeKnown = carTypeConfigs
-      .filter((cfg) => cfg.isActive && base.includes(cfg.code as (typeof CAR_TYPES)[number]))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((cfg) => cfg.code);
-
-    const remaining = base.filter((c) => !activeKnown.includes(c));
-    return [...activeKnown, ...remaining];
+    if (carTypeConfigs && carTypeConfigs.length > 0) {
+      const fromConfig = carTypeConfigs
+        .filter((cfg) => cfg.isActive)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((cfg) => cfg.code);
+      return [...new Set(fromConfig)];
+    }
+    return [...CAR_TYPES];
   }, [carTypeConfigs]);
 
   const getCarTypeDisplayLabel = (code: string) => {
@@ -313,20 +317,18 @@ export default function NewRecordScreen() {
     if (cfg) {
       return language === "en" ? cfg.displayNameEn : cfg.displayNameKa;
     }
-    return getCarTypeLabel(code, language);
+    return getCarTypeLabel(SCHEMA_CAR_TYPE_TO_LEGACY[code] ?? code, language);
   };
 
   const availableWashTypes = useMemo(() => {
-    const base = [...SERVICE_TYPES];
-    if (!washTypeConfigs) return base;
-
-    const activeKnown = washTypeConfigs
-      .filter((cfg) => cfg.isActive && base.includes(cfg.code as (typeof SERVICE_TYPES)[number]))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((cfg) => cfg.code);
-
-    const remaining = base.filter((s) => !activeKnown.includes(s));
-    return [...activeKnown, ...remaining];
+    if (washTypeConfigs && washTypeConfigs.length > 0) {
+      const fromConfig = washTypeConfigs
+        .filter((cfg) => cfg.isActive && cfg.code !== "CUSTOM")
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((cfg) => cfg.code);
+      return [...new Set(fromConfig)];
+    }
+    return [...SERVICE_TYPES];
   }, [washTypeConfigs]);
 
   const getWashTypeDisplayLabel = (code: string) => {
@@ -334,7 +336,7 @@ export default function NewRecordScreen() {
     if (cfg) {
       return language === "en" ? cfg.displayNameEn : cfg.displayNameKa;
     }
-    return getServiceTypeLabel(code, language);
+    return getServiceTypeLabel(SCHEMA_WASH_TYPE_TO_LEGACY[code] ?? code, language);
   };
 
 
@@ -472,7 +474,7 @@ export default function NewRecordScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            <            TabNavigation
+            <TabNavigation
               tabs={[
                 { key: "new-record", label: t("tabs.newRecord") },
                 { key: "all-records", label: t("tabs.allRecords"), count: records.length },

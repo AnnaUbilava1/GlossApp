@@ -23,6 +23,24 @@ export const SERVICE_TYPES = [
 export type CarTypeValue = (typeof CAR_TYPES)[number];
 export type ServiceTypeValue = (typeof SERVICE_TYPES)[number];
 
+// Schema enum codes (from admin types API) -> legacy names (for backend API)
+export const SCHEMA_CAR_TYPE_TO_LEGACY: Record<string, string> = {
+  SEDAN: "Sedan",
+  PREMIUM_CLASS: "Premium",
+  SMALL_JEEP: "Jeep",
+  BIG_JEEP: "Big Jeep",
+  MICROBUS: "Minivan",
+};
+
+export const SCHEMA_WASH_TYPE_TO_LEGACY: Record<string, string> = {
+  COMPLETE: "Complete Wash",
+  OUTER: "Outer Wash",
+  INNER: "Interior Wash",
+  ENGINE: "Engine Wash",
+  CHEMICAL: "Chemical Wash",
+  CUSTOM: "Custom Service",
+};
+
 // Localized labels for car types and wash types (frontend only)
 const CAR_TYPE_LABELS: Record<Locale, Record<string, string>> = {
   ka: {

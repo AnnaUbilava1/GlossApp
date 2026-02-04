@@ -6,8 +6,9 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// All routes require authentication; admin-only is enforced per-route so that
+// read-only type lists can be used by non-admin (e.g. staff) clients.
 router.use(authenticateToken);
-router.use(requireAdmin);
 
 function ensureMasterPin(req, res) {
   const masterPin = req.body.masterPin;
@@ -106,6 +107,7 @@ router.get('/wash', async (_req, res) => {
  */
 router.post(
   '/car',
+  requireAdmin,
   [
     body('code').isString().notEmpty(),
     body('displayNameKa').isString().notEmpty(),
@@ -175,6 +177,7 @@ router.post(
  */
 router.post(
   '/wash',
+  requireAdmin,
   [
     body('code').isString().notEmpty(),
     body('displayNameKa').isString().notEmpty(),
@@ -250,6 +253,7 @@ router.post(
  */
 router.put(
   '/car/:id',
+  requireAdmin,
   [],
   async (req, res) => {
     try {
@@ -323,6 +327,7 @@ router.put(
  */
 router.put(
   '/wash/:id',
+  requireAdmin,
   [],
   async (req, res) => {
     try {
@@ -384,7 +389,7 @@ router.put(
  *       200:
  *         description: Deleted
  */
-router.delete('/car/:id', async (req, res) => {
+router.delete('/car/:id',requireAdmin, async (req, res) => {
   try {
     if (!ensureMasterPin(req, res)) return;
 
@@ -430,7 +435,7 @@ router.delete('/car/:id', async (req, res) => {
  *       200:
  *         description: Deleted
  */
-router.delete('/wash/:id', async (req, res) => {
+router.delete('/wash/:id',requireAdmin, async (req, res) => {
   try {
     if (!ensureMasterPin(req, res)) return;
 

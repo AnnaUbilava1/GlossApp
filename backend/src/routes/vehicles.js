@@ -2,10 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import {
-  LEGACY_CAR_TYPE_TO_SCHEMA,
-  SCHEMA_CAR_TYPE_TO_LEGACY,
-} from '../utils/legacyMappings.js';
+import { LEGACY_CAR_TYPE_TO_SCHEMA } from '../utils/legacyMappings.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -82,11 +79,11 @@ router.get('/', async (req, res) => {
       take: 20,
     });
 
-    // Convert carCategory to legacy format for frontend
+    // Return carCategory as schema code so frontend can match admin type configs
     const formattedVehicles = vehicles.map((v) => ({
       id: v.id,
       licensePlate: v.licensePlate,
-      carCategory: SCHEMA_CAR_TYPE_TO_LEGACY[v.carCategory] || v.carCategory,
+      carCategory: v.carCategory,
     }));
 
     res.json({ vehicles: formattedVehicles });
@@ -166,11 +163,10 @@ router.get('/list', requireAdmin, async (req, res) => {
       prisma.vehicle.count({ where }),
     ]);
 
-    // Convert carCategory to legacy format
     const formattedVehicles = vehicles.map((v) => ({
       id: v.id,
       licensePlate: v.licensePlate,
-      carCategory: SCHEMA_CAR_TYPE_TO_LEGACY[v.carCategory] || v.carCategory,
+      carCategory: v.carCategory,
       createdAt: v.createdAt,
     }));
 
@@ -234,16 +230,8 @@ router.post(
       .withMessage('License plate is required')
       .isLength({ min: 1, max: 20 })
       .withMessage('License plate must be between 1 and 20 characters'),
-    body('carType')
-      .trim()
-      .notEmpty()
-      .withMessage('Car type is required')
-      .custom((value) => {
-        if (!LEGACY_CAR_TYPE_TO_SCHEMA[value]) {
-          throw new Error(`Invalid car type: ${value}`);
-        }
-        return true;
-      }),
+    body('carType').optional().trim(),
+    body('carCategory').optional().trim(),
   ],
   async (req, res) => {
     try {
@@ -252,8 +240,17 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { licensePlate, carType } = req.body;
-      const carCategory = LEGACY_CAR_TYPE_TO_SCHEMA[carType];
+      const { licensePlate, carType, carCategory: carCategoryBody } = req.body;
+      const legacyMapped = carType ? LEGACY_CAR_TYPE_TO_SCHEMA[carType] : null;
+      const asSchemaCode = carType && !legacyMapped ? carType : null;
+      let carCategory = carCategoryBody || legacyMapped || asSchemaCode;
+      if (!carCategory) {
+        return res.status(400).json({ error: 'carType or carCategory is required' });
+      }
+      const carTypeExists = await prisma.carType.findUnique({ where: { code: carCategory }, select: { code: true } });
+      if (!carTypeExists) {
+        return res.status(400).json({ error: `Invalid car type/category: ${carCategory}. Add it in Admin > Types first.` });
+      }
 
       // Check if license plate already exists
       const existing = await prisma.vehicle.findUnique({
@@ -280,7 +277,7 @@ router.post(
       res.status(201).json({
         vehicle: {
           ...vehicle,
-          carCategory: SCHEMA_CAR_TYPE_TO_LEGACY[vehicle.carCategory] || vehicle.carCategory,
+          carCategory: vehicle.carCategory,
         },
       });
     } catch (error) {
@@ -342,15 +339,8 @@ router.put(
       .trim()
       .isLength({ min: 1, max: 20 })
       .withMessage('License plate must be between 1 and 20 characters'),
-    body('carType')
-      .optional()
-      .trim()
-      .custom((value) => {
-        if (value && !LEGACY_CAR_TYPE_TO_SCHEMA[value]) {
-          throw new Error(`Invalid car type: ${value}`);
-        }
-        return true;
-      }),
+    body('carType').optional().trim(),
+    body('carCategory').optional().trim(),
   ],
   async (req, res) => {
     try {
@@ -360,7 +350,7 @@ router.put(
       }
 
       const { id } = req.params;
-      const { licensePlate, carType } = req.body;
+      const { licensePlate, carType, carCategory: carCategoryBody } = req.body;
 
       // Check if vehicle exists
       const existing = await prisma.vehicle.findUnique({
@@ -385,8 +375,15 @@ router.put(
       if (licensePlate !== undefined) {
         updateData.licensePlate = licensePlate.trim();
       }
-      if (carType !== undefined) {
-        updateData.carCategory = LEGACY_CAR_TYPE_TO_SCHEMA[carType];
+      if (carCategoryBody !== undefined || carType !== undefined) {
+        const carCategory = carCategoryBody || (carType ? LEGACY_CAR_TYPE_TO_SCHEMA[carType] : null);
+        if (carCategory) {
+          const carTypeExists = await prisma.carType.findUnique({ where: { code: carCategory }, select: { code: true } });
+          if (!carTypeExists) {
+            return res.status(400).json({ error: `Invalid car type/category: ${carCategory}. Add it in Admin > Types first.` });
+          }
+          updateData.carCategory = carCategory;
+        }
       }
 
       const vehicle = await prisma.vehicle.update({

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Dimensions,
     ScrollView,
@@ -17,55 +17,97 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdminHeader from "../../src/components/AdminHeader";
 import AdminTabs from "../../src/components/AdminTabs";
-import { CAR_TYPES, SERVICE_TYPES } from "../../src/utils/constants";
 import { useAuth } from "../../src/context/AuthContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { getPricingMatrix, updatePricingMatrix, type PricingMatrix } from "../../src/services/pricingService";
+import {
+  type TypeConfig,
+  getCarTypeConfigs,
+  getWashTypeConfigs,
+} from "../../src/services/typeConfigService";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
-// Initialize empty pricing matrix
-const initialPricing: PricingMatrix = {};
-CAR_TYPES.forEach((carType) => {
-  initialPricing[carType] = {};
-  SERVICE_TYPES.forEach((serviceType) => {
-    initialPricing[carType][serviceType] = 0;
+function buildEmptyMatrix(carCodes: string[], washCodes: string[]): PricingMatrix {
+  const m: PricingMatrix = {};
+  carCodes.forEach((c) => {
+    m[c] = {};
+    washCodes.forEach((w) => {
+      m[c][w] = 0;
+    });
   });
-});
+  return m;
+}
 
 export default function PricingScreen() {
   const theme = useTheme();
   const { token, user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState("pricing");
-  const [pricing, setPricing] = useState<PricingMatrix>(initialPricing);
+  const [carTypeConfigs, setCarTypeConfigs] = useState<TypeConfig[]>([]);
+  const [washTypeConfigs, setWashTypeConfigs] = useState<TypeConfig[]>([]);
+  const [pricing, setPricing] = useState<PricingMatrix>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch pricing matrix on mount
+  const carTypeCodes = useMemo(
+    () =>
+      carTypeConfigs
+        .filter((c) => c.isActive)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((c) => c.code),
+    [carTypeConfigs]
+  );
+  const washTypeCodes = useMemo(
+    () =>
+      washTypeConfigs
+        .filter((w) => w.isActive && w.code !== "CUSTOM")
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((w) => w.code),
+    [washTypeConfigs]
+  );
+
+  const getCarLabel = (code: string) =>
+    carTypeConfigs.find((c) => c.code === code)
+      ? language === "en"
+        ? carTypeConfigs.find((c) => c.code === code)!.displayNameEn
+        : carTypeConfigs.find((c) => c.code === code)!.displayNameKa
+      : code;
+  const getWashLabel = (code: string) =>
+    washTypeConfigs.find((w) => w.code === code)
+      ? language === "en"
+        ? washTypeConfigs.find((w) => w.code === code)!.displayNameEn
+        : washTypeConfigs.find((w) => w.code === code)!.displayNameKa
+      : code;
+
   useEffect(() => {
     if (!token) return;
 
-    const fetchPricing = async () => {
+    const fetchAll = async () => {
       try {
         setLoading(true);
         setError(null);
-        const matrix = await getPricingMatrix(token);
-        
-        // Merge fetched data with initial structure to ensure all combinations exist
-        const mergedPricing: PricingMatrix = { ...initialPricing };
-        CAR_TYPES.forEach((carType) => {
-          SERVICE_TYPES.forEach((serviceType) => {
-            if (matrix[carType]?.[serviceType] !== undefined) {
-              mergedPricing[carType][serviceType] = matrix[carType][serviceType];
-            }
+        const [cars, washes, matrix] = await Promise.all([
+          getCarTypeConfigs(token),
+          getWashTypeConfigs(token),
+          getPricingMatrix(token),
+        ]);
+        setCarTypeConfigs(cars);
+        setWashTypeConfigs(washes);
+        const carCodes = cars.filter((c) => c.isActive).sort((a, b) => a.sortOrder - b.sortOrder).map((c) => c.code);
+        const washCodes = washes.filter((w) => w.isActive && w.code !== "CUSTOM").sort((a, b) => a.sortOrder - b.sortOrder).map((w) => w.code);
+        const empty = buildEmptyMatrix(carCodes, washCodes);
+        const merged: PricingMatrix = {};
+        carCodes.forEach((carCode) => {
+          merged[carCode] = {};
+          washCodes.forEach((washCode) => {
+            merged[carCode][washCode] = matrix[carCode]?.[washCode] ?? empty[carCode]?.[washCode] ?? 0;
           });
         });
-        
-        setPricing(mergedPricing);
+        setPricing(merged);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("admin.pricing.saveFailed"));
       } finally {
@@ -73,7 +115,7 @@ export default function PricingScreen() {
       }
     };
 
-    fetchPricing();
+    fetchAll();
   }, [token]);
 
   const handleTabChange = (key: string) => {
@@ -123,14 +165,14 @@ export default function PricingScreen() {
   };
 
   const validatePricing = (): string | null => {
-    for (const carType of CAR_TYPES) {
-      for (const serviceType of SERVICE_TYPES) {
-        const price = pricing[carType]?.[serviceType];
+    for (const carCode of carTypeCodes) {
+      for (const washCode of washTypeCodes) {
+        const price = pricing[carCode]?.[washCode];
         if (price === undefined || price === null) {
-          return `Price is required for ${carType} × ${serviceType}`;
+          return `Price is required for ${getCarLabel(carCode)} × ${getWashLabel(washCode)}`;
         }
         if (typeof price !== "number" || price < 0 || !Number.isFinite(price)) {
-          return `Price must be a non-negative number for ${carType} × ${serviceType}`;
+          return `Price must be a non-negative number for ${getCarLabel(carCode)} × ${getWashLabel(washCode)}`;
         }
       }
     }
@@ -156,17 +198,15 @@ export default function PricingScreen() {
       await updatePricingMatrix(token, pricing);
       console.log("Pricing matrix saved successfully");
       setSuccessMessage(t("admin.pricing.saveSuccess"));
-      // Refresh the pricing data after save
       const matrix = await getPricingMatrix(token);
-      const mergedPricing: PricingMatrix = { ...initialPricing };
-      CAR_TYPES.forEach((carType) => {
-        SERVICE_TYPES.forEach((serviceType) => {
-          if (matrix[carType]?.[serviceType] !== undefined) {
-            mergedPricing[carType][serviceType] = matrix[carType][serviceType];
-          }
+      const merged: PricingMatrix = {};
+      carTypeCodes.forEach((carCode) => {
+        merged[carCode] = {};
+        washTypeCodes.forEach((washCode) => {
+          merged[carCode][washCode] = matrix[carCode]?.[washCode] ?? 0;
         });
       });
-      setPricing(mergedPricing);
+      setPricing(merged);
     } catch (err) {
       console.error("Error saving pricing:", err);
       const errorMessage = err instanceof Error ? err.message : t("admin.pricing.saveFailed");
@@ -226,24 +266,24 @@ export default function PricingScreen() {
             <DataTable style={styles.table}>
               <DataTable.Header>
                 <DataTable.Title style={styles.headerCell}>Car Type</DataTable.Title>
-                {SERVICE_TYPES.map((service) => (
-                  <DataTable.Title key={service} style={styles.priceHeaderCell}>
-                    {service}
+                {washTypeCodes.map((washCode) => (
+                  <DataTable.Title key={washCode} style={styles.priceHeaderCell}>
+                    {getWashLabel(washCode)}
                   </DataTable.Title>
                 ))}
               </DataTable.Header>
 
-              {CAR_TYPES.map((carType) => (
-                <DataTable.Row key={carType} style={styles.tableRow}>
+              {carTypeCodes.map((carCode) => (
+                <DataTable.Row key={carCode} style={styles.tableRow}>
                   <DataTable.Cell style={styles.carTypeCell}>
-                    <Text style={styles.carTypeText}>{carType}</Text>
+                    <Text style={styles.carTypeText}>{getCarLabel(carCode)}</Text>
                   </DataTable.Cell>
-                  {SERVICE_TYPES.map((serviceType) => (
-                    <DataTable.Cell key={serviceType} style={styles.priceCell}>
+                  {washTypeCodes.map((washCode) => (
+                    <DataTable.Cell key={washCode} style={styles.priceCell}>
                       <TextInput
                         mode="outlined"
-                        value={pricing[carType]?.[serviceType]?.toString() || "0"}
-                        onChangeText={(value) => handlePriceChange(carType, serviceType, value)}
+                        value={pricing[carCode]?.[washCode]?.toString() || "0"}
+                        onChangeText={(value) => handlePriceChange(carCode, washCode, value)}
                         keyboardType="numeric"
                         style={styles.priceInput}
                         contentStyle={styles.priceInputContent}
@@ -255,20 +295,20 @@ export default function PricingScreen() {
             </DataTable>
           ) : (
             <View style={styles.mobileContainer}>
-              {CAR_TYPES.map((carType) => (
-                <View key={carType} style={styles.mobileCard}>
+              {carTypeCodes.map((carCode) => (
+                <View key={carCode} style={styles.mobileCard}>
                   <Text variant="titleMedium" style={styles.mobileCarType}>
-                    {carType}
+                    {getCarLabel(carCode)}
                   </Text>
-                  {SERVICE_TYPES.map((serviceType) => (
-                    <View key={serviceType} style={styles.mobilePriceRow}>
+                  {washTypeCodes.map((washCode) => (
+                    <View key={washCode} style={styles.mobilePriceRow}>
                       <Text variant="bodyMedium" style={styles.mobileServiceLabel}>
-                        {serviceType}:
+                        {getWashLabel(washCode)}:
                       </Text>
                       <TextInput
                         mode="outlined"
-                        value={pricing[carType]?.[serviceType]?.toString() || "0"}
-                        onChangeText={(value) => handlePriceChange(carType, serviceType, value)}
+                        value={pricing[carCode]?.[washCode]?.toString() || "0"}
+                        onChangeText={(value) => handlePriceChange(carCode, washCode, value)}
                         keyboardType="numeric"
                         style={styles.mobilePriceInput}
                         contentStyle={styles.mobilePriceInputContent}
