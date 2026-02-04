@@ -2,8 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Prices taken from the board in your photo.
-// For ranges (e.g. 50–80, 30–50) we pick a representative value.
+
 const PRICES = {
   SEDAN: {
     COMPLETE: 30,
