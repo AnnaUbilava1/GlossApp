@@ -189,24 +189,20 @@ export default function DashboardScreen() {
     router.push(`/(app)/edit-record/${recordToEdit}` as import("expo-router").Href);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!auth.token || !recordToDelete || !masterPinForAction) {
-      return;
-    }
-
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+  const handleDeleteConfirm = async (pin: string) => {
+    if (!auth.token || !recordToDelete) return;
+    const trimmed = pin.trim();
+    if (!trimmed || trimmed !== MASTER_PIN) {
       setActionError("Incorrect PIN");
-      setMasterPinForAction(null);
       setRecordToDelete(null);
       return;
     }
-
     setActionError(null);
     try {
       await apiFetch(`/api/records/${recordToDelete}`, {
         token: auth.token,
         method: "DELETE",
-        body: JSON.stringify({ masterPin: masterPinForAction.trim() }),
+        body: JSON.stringify({ masterPin: trimmed }),
       });
       setActionSuccess(t("records.deletedSuccess"));
       setMasterPinForAction(null);
@@ -215,7 +211,6 @@ export default function DashboardScreen() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("records.deleteFailed");
       setActionError(msg);
-      setMasterPinForAction(null);
       setRecordToDelete(null);
     }
   };
@@ -399,8 +394,8 @@ export default function DashboardScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleDeleteConfirm();
+          setRecordToDelete(null);
+          handleDeleteConfirm(pin);
         }}
         title={t("records.deleteRecord")}
         description={t("records.deleteRecordDescription")}

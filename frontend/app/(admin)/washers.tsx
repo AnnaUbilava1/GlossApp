@@ -168,27 +168,22 @@ export default function WashersScreen() {
     setMasterPinForAction("");
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!token || !washerToDelete || !masterPinForAction) {
-      return;
-    }
-
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+  const handleDeleteConfirm = async (pin: string) => {
+    if (!token || !washerToDelete) return;
+    const trimmed = pin.trim();
+    if (!trimmed || trimmed !== MASTER_PIN) {
       setError(t("admin.incorrectPin"));
-      setMasterPinForAction(null);
       setWasherToDelete(null);
       return;
     }
-
     try {
-      await deleteWasher(token, washerToDelete, masterPinForAction.trim());
+      await deleteWasher(token, washerToDelete, trimmed);
       setSuccessMessage(t("admin.washers.deleteSuccess"));
       setMasterPinForAction(null);
       setWasherToDelete(null);
       await refreshWashers();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.washers.deleteFailed"));
-      setMasterPinForAction(null);
       setWasherToDelete(null);
     }
   };
@@ -321,8 +316,8 @@ export default function WashersScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleDeleteConfirm();
+          setWasherToDelete(null);
+          handleDeleteConfirm(pin);
         }}
         title={t("admin.washers.deleteTitle")}
         description={t("admin.washers.deleteDescription")}

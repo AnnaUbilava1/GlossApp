@@ -146,27 +146,22 @@ export default function CompaniesScreen() {
     setMasterPinForAction("");
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!token || !companyToDelete || !masterPinForAction) {
-      return;
-    }
-
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+  const handleDeleteConfirm = async (pin: string) => {
+    if (!token || !companyToDelete) return;
+    const trimmed = pin.trim();
+    if (!trimmed || trimmed !== MASTER_PIN) {
       setError(t("admin.incorrectPin"));
-      setMasterPinForAction(null);
       setCompanyToDelete(null);
       return;
     }
-
     try {
-      await deleteCompany(token, companyToDelete, masterPinForAction.trim());
+      await deleteCompany(token, companyToDelete, trimmed);
       setSuccessMessage(t("admin.companies.deleteSuccess"));
       setMasterPinForAction(null);
       setCompanyToDelete(null);
       await refreshCompanies();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.companies.deleteFailed"));
-      setMasterPinForAction(null);
       setCompanyToDelete(null);
     }
   };
@@ -342,8 +337,8 @@ export default function CompaniesScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleDeleteConfirm();
+          setCompanyToDelete(null);
+          handleDeleteConfirm(pin);
         }}
         title={t("admin.companies.deleteTitle")}
         description={t("admin.companies.deleteDescription")}

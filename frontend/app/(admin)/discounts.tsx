@@ -118,27 +118,22 @@ export default function DiscountsScreen() {
     setMasterPinForAction("");
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!token || !discountToDelete || !masterPinForAction) {
-      return;
-    }
-
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+  const handleDeleteConfirm = async (pin: string) => {
+    if (!token || !discountToDelete) return;
+    const trimmed = pin.trim();
+    if (!trimmed || trimmed !== MASTER_PIN) {
       setError(t("admin.incorrectPin"));
-      setMasterPinForAction(null);
       setDiscountToDelete(null);
       return;
     }
-
     try {
-      await deleteDiscount(token, discountToDelete, masterPinForAction.trim());
+      await deleteDiscount(token, discountToDelete, trimmed);
       setSuccessMessage(t("admin.discounts.deleteSuccess"));
       setMasterPinForAction(null);
       setDiscountToDelete(null);
       await refreshDiscounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.discounts.deleteFailed"));
-      setMasterPinForAction(null);
       setDiscountToDelete(null);
     }
   };
@@ -261,8 +256,8 @@ export default function DiscountsScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleDeleteConfirm();
+          setDiscountToDelete(null);
+          handleDeleteConfirm(pin);
         }}
         title={t("admin.discounts.deleteTitle")}
         description={t("admin.discounts.deleteDescription")}

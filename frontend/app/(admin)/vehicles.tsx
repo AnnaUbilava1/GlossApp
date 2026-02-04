@@ -147,27 +147,22 @@ export default function VehiclesScreen() {
     setMasterPinForAction("");
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!token || !vehicleToDelete || !masterPinForAction) {
-      return;
-    }
-
-    if (masterPinForAction.trim() !== MASTER_PIN) {
+  const handleDeleteConfirm = async (pin: string) => {
+    if (!token || !vehicleToDelete) return;
+    const trimmed = pin.trim();
+    if (!trimmed || trimmed !== MASTER_PIN) {
       setError(t("admin.incorrectPin"));
-      setMasterPinForAction(null);
       setVehicleToDelete(null);
       return;
     }
-
     try {
-      await deleteVehicle(token, vehicleToDelete, masterPinForAction.trim());
+      await deleteVehicle(token, vehicleToDelete, trimmed);
       setSuccessMessage(t("admin.vehicles.deleteSuccess"));
       setMasterPinForAction(null);
       setVehicleToDelete(null);
       await refreshVehicles();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.vehicles.deleteFailed"));
-      setMasterPinForAction(null);
       setVehicleToDelete(null);
     }
   };
@@ -341,8 +336,8 @@ export default function VehiclesScreen() {
           setMasterPinForAction(null);
         }}
         onCorrectPin={(pin) => {
-          setMasterPinForAction(pin);
-          handleDeleteConfirm();
+          setVehicleToDelete(null);
+          handleDeleteConfirm(pin);
         }}
         title={t("admin.vehicles.deleteTitle")}
         description={t("admin.vehicles.deleteDescription")}
