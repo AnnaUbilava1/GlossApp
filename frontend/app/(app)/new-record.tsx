@@ -15,6 +15,7 @@ import {
   List,
   Modal,
   Portal,
+  Snackbar,
   Text,
   TextInput,
   useTheme
@@ -90,6 +91,7 @@ export default function NewRecordScreen() {
   const [loadingInit, setLoadingInit] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key);
@@ -293,7 +295,21 @@ export default function NewRecordScreen() {
         method: "POST",
         body: JSON.stringify(requestBody),
       });
-      router.push("/(app)/dashboard");
+      setSuccessMessage(t("newRecord.success"));
+      
+      // Clear form after successful submission
+      setLicensePlate("");
+      setCarType("");
+      setServiceType("");
+      setIsCustomService(false);
+      setCustomServiceName("");
+      setManualPrice("");
+      setBoxNumber("");
+      setSelectedDiscount(null);
+      setSelectedWasher(null);
+      setOriginalPrice(null);
+      setDiscountedPrice(null);
+      setWasherCut(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("newRecord.error.createFailed"));
     } finally {
@@ -677,6 +693,15 @@ export default function NewRecordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={{ marginBottom: 16 }}
+      >
+        {successMessage}
+      </Snackbar>
     </SafeAreaView>
   );
 }

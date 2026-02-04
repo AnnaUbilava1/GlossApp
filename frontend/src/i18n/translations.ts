@@ -63,6 +63,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "newRecord.error.pricePositive": "ფასი უნდა იყოს დადებითი რიცხვი",
     "newRecord.error.priceValid": "ფასი უნდა იყოს მართებული რიცხვი",
     "newRecord.error.createFailed": "ჩანაწერის დამატება ვერ მოხერხდა",
+    "newRecord.success": "ჩანაწერი წარმატებით დაემატა",
 
     // All Records (dashboard)
     "records.startDate": "დაწყების თარიღი (წელი-თვე-დღე)",
@@ -337,6 +338,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "newRecord.error.pricePositive": "Price must be a positive number",
     "newRecord.error.priceValid": "Price must be a valid number",
     "newRecord.error.createFailed": "Failed to create record",
+    "newRecord.success": "Record created successfully",
 
     // All Records
     "records.startDate": "Start Date (YYYY-MM-DD)",
