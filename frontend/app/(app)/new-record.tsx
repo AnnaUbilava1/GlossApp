@@ -397,7 +397,6 @@ export default function NewRecordScreen() {
             editable={false}
             style={styles.input}
             contentStyle={styles.inputContent}
-            right={<TextInput.Icon icon="chevron-down" />}
           />
         </TouchableOpacity>
 

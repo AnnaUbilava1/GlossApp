@@ -101,7 +101,6 @@ export default function LicenseAutocomplete({
           editable={false}
           style={styles.input}
           contentStyle={styles.inputContent}
-          right={<TextInput.Icon icon="chevron-down" />}
         />
       </TouchableOpacity>
 
