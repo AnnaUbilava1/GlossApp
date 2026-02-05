@@ -41,7 +41,10 @@ export default function DashboardSummary({
   setStatusFilter,
 }: Props) {
   const { t, language } = useLanguage();
-  const [screenWidth, setScreenWidth] = useState(Dimensions.get("window").width);
+  const [screenDimensions, setScreenDimensions] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
+  });
   const [modalVisible, setModalVisible] = useState(false);
   
   // Temporary filter states for modal
@@ -53,7 +56,7 @@ export default function DashboardSummary({
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setScreenWidth(window.width);
+      setScreenDimensions({ width: window.width, height: window.height });
     });
     return () => subscription?.remove();
   }, []);
@@ -69,12 +72,17 @@ export default function DashboardSummary({
     }
   }, [modalVisible, washerFilter, paymentFilter, statusFilter, startDate, endDate]);
 
-  const isSmallScreen = screenWidth < 1024; // Use standard tablet breakpoint
-  const isMobile = screenWidth < 600;
-  const isTablet = screenWidth >= 600 && screenWidth < 1024;
+  const isMobile = screenDimensions.width < 600;
+  const isMobileLandscape = isMobile && screenDimensions.width > screenDimensions.height;
+  const isTablet = screenDimensions.width >= 600 && screenDimensions.width < 1024;
   
-  // Create responsive styles
-  const styles = useMemo(() => createStyles(screenWidth), [screenWidth]);
+  // Create responsive styles - recalculate when modal opens to ensure landscape detection
+  const styles = useMemo(() => {
+    // Re-check dimensions when creating styles, especially for modal
+    const currentIsMobile = screenDimensions.width < 600;
+    const currentIsMobileLandscape = currentIsMobile && screenDimensions.width > screenDimensions.height;
+    return createStyles(screenDimensions.width, screenDimensions.height, currentIsMobileLandscape);
+  }, [screenDimensions.width, screenDimensions.height, modalVisible]);
 
   const handleModalOK = () => {
     setWasherFilter(tempWasherFilter);
@@ -116,6 +124,76 @@ export default function DashboardSummary({
 
     // Use key to force remount when modal opens or language changes
     const componentKey = isModal ? `modal-${language}-${modalVisible}` : `inline-${language}`;
+
+    // For landscape modal, use 2-row layout - recalculate landscape mode
+    const currentIsMobile = screenDimensions.width < 600;
+    const currentIsMobileLandscape = currentIsMobile && screenDimensions.width > screenDimensions.height;
+    
+    if (isModal && currentIsMobileLandscape) {
+      return (
+        <View style={styles.modalFilterRowLandscape} key={componentKey}>
+          {/* First Row */}
+          <View style={styles.modalFilterRowLandscapeRow}>
+            <View style={styles.modalFilterColumnLandscape}>
+              <Text variant="labelSmall" style={styles.filterLabel}>
+                {t("filters.washer")}
+              </Text>
+              <WasherSelect
+                key={`washer-${componentKey}`}
+                washers={washers}
+                selectedUsername={currentWasherFilter}
+                onChangeUsername={setCurrentWasherFilter}
+              />
+            </View>
+            <View style={styles.modalFilterColumnLandscape}>
+              <Text variant="labelSmall" style={styles.filterLabel}>
+                {t("filters.paymentMethod")}
+              </Text>
+              <PaymentMethodSelect
+                key={`payment-${componentKey}`}
+                selected={currentPaymentFilter}
+                onSelect={setCurrentPaymentFilter}
+              />
+            </View>
+            <View style={styles.modalFilterColumnLandscape}>
+              <Text variant="labelSmall" style={styles.filterLabel}>
+                {t("filters.washStatus")}
+              </Text>
+              <WashStatusSelect
+                key={`status-${componentKey}`}
+                selected={currentStatusFilter}
+                onSelect={setCurrentStatusFilter}
+              />
+            </View>
+          </View>
+          {/* Second Row */}
+          <View style={styles.modalFilterRowLandscapeRow}>
+            <View style={styles.modalFilterColumnLandscape}>
+              <Text variant="labelSmall" style={styles.filterLabel}>
+                {t("records.startDate")}
+              </Text>
+              <TextInput
+                mode="outlined"
+                value={currentStartDate}
+                onChangeText={setCurrentStartDate}
+                style={styles.dateInputLandscape}
+              />
+            </View>
+            <View style={styles.modalFilterColumnLandscape}>
+              <Text variant="labelSmall" style={styles.filterLabel}>
+                {t("records.endDate")}
+              </Text>
+              <TextInput
+                mode="outlined"
+                value={currentEndDate}
+                onChangeText={setCurrentEndDate}
+                style={styles.dateInputLandscape}
+              />
+            </View>
+          </View>
+        </View>
+      );
+    }
 
     return (
       <View style={isModal ? styles.modalFilterRow : styles.filterRow} key={componentKey}>
@@ -225,14 +303,41 @@ export default function DashboardSummary({
 
       {/* Filters Modal for small screens */}
       <Portal>
-        <Dialog visible={modalVisible} onDismiss={handleModalDismiss}>
+        <Dialog 
+          visible={modalVisible} 
+          onDismiss={handleModalDismiss}
+          style={styles.modalDialog}
+        >
           <Dialog.Title>{t("filters.title")}</Dialog.Title>
-          <Dialog.Content>
-            <View style={styles.modalFiltersContainer} key={`modal-content-${language}-${modalVisible}`}>
-              {renderFilters(true)}
-            </View>
-          </Dialog.Content>
-          <Dialog.Actions>
+          {(() => {
+            // Recalculate landscape mode when modal renders
+            const currentIsMobile = screenDimensions.width < 600;
+            const currentIsMobileLandscape = currentIsMobile && screenDimensions.width > screenDimensions.height;
+            
+            if (currentIsMobileLandscape) {
+              return (
+                <Dialog.Content style={styles.modalContentLandscape}>
+                  <View style={styles.modalFiltersContainer} key={`modal-content-${language}-${modalVisible}`}>
+                    {renderFilters(true)}
+                  </View>
+                </Dialog.Content>
+              );
+            } else {
+              return (
+                <Dialog.ScrollArea style={styles.modalScrollArea}>
+                  <ScrollView 
+                    contentContainerStyle={styles.modalScrollContent}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    <View style={styles.modalFiltersContainer} key={`modal-content-${language}-${modalVisible}`}>
+                      {renderFilters(true)}
+                    </View>
+                  </ScrollView>
+                </Dialog.ScrollArea>
+              );
+            }
+          })()}
+          <Dialog.Actions style={styles.modalActions}>
             <Button onPress={handleModalDismiss}>{t("button.cancel")}</Button>
             <Button mode="contained" onPress={handleModalOK}>
               {t("button.ok")}
@@ -595,8 +700,8 @@ const staticStyles = StyleSheet.create({
   },
 });
 
-// Create styles function that uses screen width
-const createStyles = (screenWidth: number) => {
+// Create styles function that uses screen width and height
+const createStyles = (screenWidth: number, screenHeight: number, isMobileLandscape: boolean) => {
   const isMobile = screenWidth < 600;
   const isTablet = screenWidth >= 600 && screenWidth < 1024;
   
@@ -674,10 +779,12 @@ const createStyles = (screenWidth: number) => {
     filterColumn: {
       flex: isMobile ? 0 : 1,
       minWidth: isMobile ? "100%" : 120,
+      width: isMobile ? "100%" : undefined,
     },
     filterColumnWasher: {
       flex: isMobile ? 0 : 0.8,
       minWidth: isMobile ? "100%" : 100,
+      width: isMobile ? "100%" : undefined,
     },
     filterLabel: {
       marginBottom: isMobile ? 6 : 4,
@@ -712,8 +819,55 @@ const createStyles = (screenWidth: number) => {
     },
     modalFilterRow: {
       flexDirection: "column",
-      gap: 16,
+      gap: isMobile ? 72 : 16,
       alignItems: "stretch",
+      paddingBottom: 0,
+      width: "100%",
+    },
+    modalFilterRowLandscape: {
+      flexDirection: "column",
+      gap: 12,
+      alignItems: "stretch",
+      width: "100%",
+    },
+    modalFilterRowLandscapeRow: {
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "flex-start",
+      width: "100%",
+    },
+    modalFilterColumnLandscape: {
+      flex: 1,
+      minWidth: 0,
+    },
+    modalDialog: {
+      maxWidth: isMobileLandscape ? screenWidth * 0.95 : undefined,
+      margin: isMobileLandscape ? 8 : isMobile ? 12 : 24,
+      maxHeight: isMobileLandscape ? screenHeight * 0.7 : isMobile ? screenHeight * 0.9 : undefined,
+    },
+    modalContentLandscape: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      maxHeight: screenHeight * 0.4,
+    },
+    modalScrollArea: {
+      maxHeight: isMobile ? screenHeight * 0.6 : undefined,
+      paddingHorizontal: 0,
+    },
+    modalScrollContent: {
+      paddingHorizontal: 24,
+      paddingVertical: 8,
+    },
+    modalActions: {
+      paddingHorizontal: 8,
+      paddingBottom: 8,
+      minHeight: 52,
+      borderTopWidth: 1,
+      borderTopColor: "#E0E0E0",
+    },
+    dateInputLandscape: {
+      backgroundColor: "#FAFAFA",
+      height: 36,
     },
   });
 };
