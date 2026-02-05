@@ -35,7 +35,9 @@ export default function DashboardScreen() {
   
   // Standard responsive breakpoints
   const isMobile = screenDimensions.width < 600;
+  const isMobileLandscape = isMobile && screenDimensions.width > screenDimensions.height;
   const isTablet = screenDimensions.width >= 600 && screenDimensions.width < 1024;
+  const isMediumTablet = screenDimensions.width >= 600 && screenDimensions.width < 900; // Medium tablets for responsive styling
   const isDesktop = screenDimensions.width >= 1024;
 
   // Listen for screen dimension changes (including orientation)
@@ -47,7 +49,7 @@ export default function DashboardScreen() {
   }, []);
 
   // Generate styles based on screen size
-  const styles = createStyles(isMobile, isTablet, isDesktop);
+  const styles = createStyles(isMobile, isMobileLandscape, isTablet, isMediumTablet, isDesktop);
   const [activeTab, setActiveTab] = React.useState("all-records");
   const {
     records,
@@ -272,24 +274,52 @@ export default function DashboardScreen() {
           )}
 
           {!isMobile ? (
-            <DataTable style={styles.table}>
-              <DataTable.Header>
-                <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
-                <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
-              </DataTable.Header>
+            isDesktop ? (
+              <DataTable style={styles.table}>
+                <DataTable.Header>
+                  <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
+                  <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
+                </DataTable.Header>
 
-              {filteredRecords.map((record) => renderRecordRow(record))}
-            </DataTable>
+                {filteredRecords.map((record) => renderRecordRow(record))}
+              </DataTable>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={isMobileLandscape || isMediumTablet || isTablet}
+                style={styles.tableScrollView}
+                contentContainerStyle={styles.tableScrollContent}
+              >
+                <DataTable style={styles.table}>
+                  <DataTable.Header>
+                    <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
+                  </DataTable.Header>
+
+                  {filteredRecords.map((record) => renderRecordRow(record))}
+                </DataTable>
+              </ScrollView>
+            )
           ) : (
             // Mobile view: Card-based layout
             <View style={styles.mobileContainer}>
@@ -451,7 +481,7 @@ export default function DashboardScreen() {
   );
 }
 
-const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) => StyleSheet.create({
+const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: boolean, isMediumTablet: boolean, isDesktop: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -488,8 +518,16 @@ const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) 
   dateInput: {
     backgroundColor: "#FAFAFA",
   },
+  tableScrollView: {
+    flexGrow: 0,
+  },
+  tableScrollContent: {
+    flexGrow: 0,
+  },
   table: {
     backgroundColor: "transparent",
+    width: isDesktop ? "100%" : undefined,
+    minWidth: isDesktop ? undefined : isMediumTablet ? 600 : isMobileLandscape ? 800 : undefined,
   },
   tableRow: {
     minHeight: 60,
@@ -497,16 +535,19 @@ const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) 
   headerCell: {
     flex: 1,
   },
+  headerText: {
+    fontSize: isMediumTablet ? 11 : isMobileLandscape ? 11 : 12,
+  },
   cell: {
     flex: 1,
   },
   licenseCell: {
     flex: 1.2,
-    minWidth: 100,
+    minWidth: isMediumTablet ? 90 : isMobileLandscape ? 100 : 100,
   },
   carTypeCell: {
     flex: 0.9,
-    minWidth: 80,
+    minWidth: isMediumTablet ? 70 : isMobileLandscape ? 75 : 80,
   },
   companyCell: {
     flex: 1.5,
@@ -514,11 +555,11 @@ const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) 
   },
   serviceCell: {
     flex: 1.1,
-    minWidth: 100,
+    minWidth: isMediumTablet ? 90 : isMobileLandscape ? 95 : 100,
   },
   priceCell: {
     flex: 0.8,
-    minWidth: 90,
+    minWidth: isMediumTablet ? 80 : isMobileLandscape ? 85 : 90,
   },
   boxCell: {
     flex: 0.5,
@@ -534,11 +575,11 @@ const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) 
   },
   actionsCell: {
     flex: 1.5,
-    minWidth: 150,
+    minWidth: isMediumTablet ? 140 : isMobileLandscape ? 145 : 150,
     justifyContent: "center",
   },
   cellText: {
-    fontSize: 12,
+    fontSize: isMediumTablet ? 11 : isMobileLandscape ? 11 : 12,
   },
   priceText: {
     color: "#2F80ED",

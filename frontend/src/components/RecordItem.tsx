@@ -13,6 +13,7 @@ type Props = {
   onPayment: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  condensed?: boolean;
 };
 
 export default function RecordItem({
@@ -21,6 +22,7 @@ export default function RecordItem({
   onPayment,
   onEdit,
   onDelete,
+  condensed = false,
 }: Props) {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -34,27 +36,41 @@ export default function RecordItem({
         {record.licenseNumber}
       </DataTable.Cell>
       <DataTable.Cell style={[styles.cell, styles.carTypeCell]}>{record.carType}</DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.companyCell]} textStyle={styles.cellText}>
-        {record.companyDiscount}
-      </DataTable.Cell>
+      {!condensed && (
+        <DataTable.Cell style={[styles.cell, styles.companyCell]} textStyle={styles.cellText}>
+          {record.companyDiscount}
+        </DataTable.Cell>
+      )}
       <DataTable.Cell style={[styles.cell, styles.serviceCell]}>{record.serviceType}</DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.priceCell]}>
-        <Text style={styles.priceText}>{formatMoney(record.originalPrice ?? 0)}</Text>
-      </DataTable.Cell>
+      {!condensed && (
+        <DataTable.Cell style={[styles.cell, styles.priceCell]}>
+          <Text style={styles.priceText}>{formatMoney(record.originalPrice ?? 0)}</Text>
+        </DataTable.Cell>
+      )}
       <DataTable.Cell style={[styles.cell, styles.priceCell]}>
         <Text style={styles.priceText}>{formatMoney(record.price)}</Text>
       </DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.priceCell]}>
-        <Text style={styles.priceText}>{formatMoney(record.washerCut ?? 0)}</Text>
-      </DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.boxCell]}>{record.boxNumber}</DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.washerCell]}>{record.washerName}</DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.timeCell]}>
-        {formatDateTime(record.startTime)}
-      </DataTable.Cell>
-      <DataTable.Cell style={[styles.cell, styles.timeCell]}>
-        {formatDateTime(record.endTime)}
-      </DataTable.Cell>
+      {!condensed && (
+        <DataTable.Cell style={[styles.cell, styles.priceCell]}>
+          <Text style={styles.priceText}>{formatMoney(record.washerCut ?? 0)}</Text>
+        </DataTable.Cell>
+      )}
+      {!condensed && (
+        <DataTable.Cell style={[styles.cell, styles.boxCell]}>{record.boxNumber}</DataTable.Cell>
+      )}
+      {!condensed && (
+        <DataTable.Cell style={[styles.cell, styles.washerCell]}>{record.washerName}</DataTable.Cell>
+      )}
+      {!condensed && (
+        <>
+          <DataTable.Cell style={[styles.cell, styles.timeCell]}>
+            {formatDateTime(record.startTime)}
+          </DataTable.Cell>
+          <DataTable.Cell style={[styles.cell, styles.timeCell]}>
+            {formatDateTime(record.endTime)}
+          </DataTable.Cell>
+        </>
+      )}
       <DataTable.Cell style={styles.actionsCell}>
         <View style={styles.actionsContainer}>
           {/* Show buttons only if not both finished and paid */}
@@ -66,7 +82,7 @@ export default function RecordItem({
                 compact
                 onPress={onFinish}
                 style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
-                labelStyle={styles.finishButtonLabel}
+                labelStyle={condensed ? styles.finishButtonLabelCondensed : styles.finishButtonLabel}
                 disabled={record.isFinished}
               >
                 {record.isFinished ? t("records.finished") : t("records.finish")}
@@ -77,7 +93,7 @@ export default function RecordItem({
                   compact
                   onPress={onPayment}
                   style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
-                  labelStyle={styles.paymentButtonLabel}
+                  labelStyle={condensed ? styles.paymentButtonLabelCondensed : styles.paymentButtonLabel}
                   disabled={record.isPaid}
                 >
                   {record.isPaid ? t("records.paid") : t("records.pay")}
@@ -89,13 +105,13 @@ export default function RecordItem({
             <>
               <IconButton
                 icon="pencil"
-                size={20}
+                size={condensed ? 18 : 20}
                 iconColor="#2F80ED"
                 onPress={onEdit}
               />
               <IconButton
                 icon="delete"
-                size={20}
+                size={condensed ? 18 : 20}
                 iconColor="#D32F2F"
                 onPress={onDelete}
               />
@@ -172,6 +188,9 @@ const styles = StyleSheet.create({
   finishButtonLabel: {
     fontSize: 12,
   },
+  finishButtonLabelCondensed: {
+    fontSize: 10,
+  },
   paymentButtonUnpaid: {
     backgroundColor: "#D32F2F", // Red when unpaid
   },
@@ -180,6 +199,9 @@ const styles = StyleSheet.create({
   },
   paymentButtonLabel: {
     fontSize: 12,
+  },
+  paymentButtonLabelCondensed: {
+    fontSize: 10,
   },
 });
 
