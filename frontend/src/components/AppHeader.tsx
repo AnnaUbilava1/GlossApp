@@ -5,7 +5,9 @@ import { Button, Text, useTheme } from "react-native-paper";
 import { useLanguage } from "../context/LanguageContext";
 
 const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+const isMobile = width < 600;
+const isTablet = width >= 600 && width < 1024;
+const isDesktop = width >= 1024;
 
 interface AppHeaderProps {
   user?: {
@@ -41,12 +43,18 @@ export default function AppHeader({
           <Text style={styles.logoText}>💧</Text>
         </View>
         <View style={styles.titleContainer}>
-          <Text variant="titleLarge" style={styles.title}>
+          <Text 
+            variant={isMobile ? "titleMedium" : "titleLarge"} 
+            style={styles.title}
+            numberOfLines={1}
+          >
             {t("header.appName")}
           </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            {userName} • {userRole}
-          </Text>
+          {!isMobile && (
+            <Text variant="bodyMedium" style={styles.subtitle} numberOfLines={1}>
+              {userName} • {userRole}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -87,8 +95,9 @@ export default function AppHeader({
             onPress={() => router.push("/(admin)")}
             labelStyle={styles.buttonLabel}
             style={styles.adminButton}
+            compact={isMobile}
           >
-            {t("header.admin")}
+            {isMobile ? "" : t("header.admin")}
           </Button>
         )}
         <Button
@@ -97,8 +106,9 @@ export default function AppHeader({
           onPress={handleLogout}
           labelStyle={styles.buttonLabel}
           style={styles.logoutButton}
+          compact={isMobile}
         >
-          {t("header.logout")}
+          {isMobile ? "" : t("header.logout")}
         </Button>
       </View>
     </View>
@@ -110,74 +120,84 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: isTablet ? 24 : 16,
-    paddingVertical: 16,
+    paddingHorizontal: isMobile ? 12 : isTablet ? 20 : 24,
+    paddingVertical: isMobile ? 12 : 16,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
+    minHeight: isMobile ? 56 : 64,
   },
   leftSection: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    minWidth: 0,
+    marginRight: isMobile ? 8 : 12,
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: isMobile ? 32 : 40,
+    height: isMobile ? 32 : 40,
+    borderRadius: isMobile ? 16 : 20,
     backgroundColor: "#2F80ED",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: isMobile ? 8 : 12,
+    flexShrink: 0,
   },
   logoText: {
-    fontSize: 24,
+    fontSize: isMobile ? 20 : 24,
     color: "#FFFFFF",
   },
   titleContainer: {
     flex: 1,
+    minWidth: 0,
   },
   title: {
     fontWeight: "bold",
     color: "#212121",
+    fontSize: isMobile ? 16 : undefined,
   },
   subtitle: {
     color: "#757575",
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
   },
   rightSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: isMobile ? 4 : 8,
+    flexShrink: 0,
   },
   langRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   langButton: {
-    minWidth: 26,
-    borderRadius:8,
+    minWidth: isMobile ? 24 : 26,
+    borderRadius: 8,
   },
   langButtonContent: {
-    paddingHorizontal: 2,
+    paddingHorizontal: isMobile ? 1 : 2,
   },
   langButtonLabel: {
-    fontSize: 12,
+    fontSize: isMobile ? 11 : 12,
     fontWeight: "500",
-    marginVertical: 5,
+    marginVertical: isMobile ? 4 : 5,
   },
   langDivider: {
     width: 1,
-    height: 18,
+    height: isMobile ? 16 : 18,
     backgroundColor: "rgba(37, 99, 235, 0.45)",
-    marginHorizontal: 4,
+    marginHorizontal: isMobile ? 2 : 4,
     alignSelf: "center",
   },
   adminButton: {
-    marginRight: 4,
+    marginRight: isMobile ? 2 : 4,
+    minWidth: isMobile ? 40 : undefined,
   },
-  logoutButton: {},
+  logoutButton: {
+    minWidth: isMobile ? 40 : undefined,
+  },
   buttonLabel: {
-    fontSize: 14,
+    fontSize: isMobile ? 12 : 14,
     color: "#424242",
   },
 });

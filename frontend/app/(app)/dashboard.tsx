@@ -33,11 +33,10 @@ export default function DashboardScreen() {
     return { width, height };
   });
   
-  // Consider device type: use both width and height to better handle landscape
-  // A device is considered tablet if width >= 768 AND it's not a phone in landscape
-  // (phones in landscape typically have width > height, but still want mobile view)
-  const isTablet = screenDimensions.width >= 768 && 
-                   (screenDimensions.width >= screenDimensions.height || screenDimensions.width >= 1024);
+  // Standard responsive breakpoints
+  const isMobile = screenDimensions.width < 600;
+  const isTablet = screenDimensions.width >= 600 && screenDimensions.width < 1024;
+  const isDesktop = screenDimensions.width >= 1024;
 
   // Listen for screen dimension changes (including orientation)
   useEffect(() => {
@@ -48,7 +47,7 @@ export default function DashboardScreen() {
   }, []);
 
   // Generate styles based on screen size
-  const styles = createStyles(isTablet);
+  const styles = createStyles(isMobile, isTablet, isDesktop);
   const [activeTab, setActiveTab] = React.useState("all-records");
   const {
     records,
@@ -272,7 +271,7 @@ export default function DashboardScreen() {
             </Text>
           )}
 
-          {isTablet ? (
+          {!isMobile ? (
             <DataTable style={styles.table}>
               <DataTable.Header>
                 <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
@@ -330,7 +329,8 @@ export default function DashboardScreen() {
                             mode="contained"
                             compact
                             onPress={() => handleFinish(record.id)}
-                            style={record.isFinished ? styles.finishButtonDone : styles.finishButton}
+                            style={[record.isFinished ? styles.finishButtonDone : styles.finishButton, isMobile && styles.mobileButton]}
+                            labelStyle={isMobile ? styles.mobileButtonLabel : undefined}
                             disabled={record.isFinished}
                           >
                             {record.isFinished ? t("records.finished") : t("records.finish")}
@@ -340,7 +340,8 @@ export default function DashboardScreen() {
                               mode="contained"
                               compact
                               onPress={() => handlePaymentClick(record.id)}
-                              style={record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid}
+                              style={[record.isPaid ? styles.paymentButtonPaid : styles.paymentButtonUnpaid, isMobile && styles.mobileButton]}
+                              labelStyle={isMobile ? styles.mobileButtonLabel : undefined}
                               disabled={record.isPaid}
                             >
                               {record.isPaid ? t("records.paid") : t("records.pay")}
@@ -450,7 +451,7 @@ export default function DashboardScreen() {
   );
 }
 
-const createStyles = (isTablet: boolean) => StyleSheet.create({
+const createStyles = (isMobile: boolean, isTablet: boolean, isDesktop: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -458,11 +459,11 @@ const createStyles = (isTablet: boolean) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobile ? 8 : isTablet ? 16 : 24,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobile ? 12 : isTablet ? 20 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -570,43 +571,49 @@ const createStyles = (isTablet: boolean) => StyleSheet.create({
     marginBottom: 16,
   },
   mobileContainer: {
-    gap: 2,
+    gap: isMobile ? 8 : 12,
   },
   mobileCard: {
     borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    padding: isMobile ? 10 : 12,
+    marginBottom: isMobile ? 8 : 12,
   },
   mobileCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: isMobile ? 8 : 6,
+    flexWrap: "wrap",
+    gap: 8,
   },
   mobileLicense: {
     fontWeight: "bold",
+    fontSize: isMobile ? 15 : undefined,
   },
   mobilePrice: {
-    fontSize: 16,
+    fontSize: isMobile ? 14 : 16,
     fontWeight: "600",
   },
   mobileCardBody: {
-    marginBottom: 8,
+    marginBottom: isMobile ? 8 : 8,
     flexWrap: "wrap",
-    flexDirection: "row",
   },
   mobileDetails: {
     color: "#757575",
-    marginTop: 2,
+    marginTop: isMobile ? 4 : 2,
+    fontSize: isMobile ? 12 : undefined,
   },
   mobileTime: {
     color: "#757575",
-    marginTop: 2,
+    marginTop: isMobile ? 4 : 2,
+    fontSize: isMobile ? 11 : undefined,
   },
   mobileActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: isMobile ? 4 : 8,
+    flexWrap: "wrap",
+    marginTop: isMobile ? 4 : 0,
   },
   footer: {
     marginTop: 24,
@@ -618,6 +625,13 @@ const createStyles = (isTablet: boolean) => StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
     color: "#424242",
+  },
+  mobileButton: {
+    minWidth: isMobile ? 70 : undefined,
+    paddingHorizontal: isMobile ? 8 : undefined,
+  },
+  mobileButtonLabel: {
+    fontSize: 11,
   },
 });
 

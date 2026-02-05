@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { StyleSheet, TouchableOpacity, View, Dimensions, ScrollView } from "react-native";
 import { Menu, Text, TextInput, Button, Dialog, Portal, Checkbox } from "react-native-paper";
 import type { DashboardRecord } from "../hooks/useDashboard";
@@ -24,7 +24,7 @@ type Props = {
   setStatusFilter: (value: StatusFilter) => void;
 };
 
-const SCREEN_WIDTH_BREAKPOINT = 1260;
+// Screen dimensions will be checked dynamically in component
 
 export default function DashboardSummary({
   records,
@@ -69,7 +69,12 @@ export default function DashboardSummary({
     }
   }, [modalVisible, washerFilter, paymentFilter, statusFilter, startDate, endDate]);
 
-  const isSmallScreen = screenWidth < SCREEN_WIDTH_BREAKPOINT;
+  const isSmallScreen = screenWidth < 1024; // Use standard tablet breakpoint
+  const isMobile = screenWidth < 600;
+  const isTablet = screenWidth >= 600 && screenWidth < 1024;
+  
+  // Create responsive styles
+  const styles = useMemo(() => createStyles(screenWidth), [screenWidth]);
 
   const handleModalOK = () => {
     setWasherFilter(tempWasherFilter);
@@ -204,7 +209,7 @@ export default function DashboardSummary({
 
         {/* Filters on the right */}
         <View style={styles.filtersBlock}>
-          {isSmallScreen ? (
+          {isMobile || isTablet ? (
             <Button
               mode="outlined"
               onPress={() => setModalVisible(true)}
@@ -249,8 +254,25 @@ function WasherSelect({ washers, selectedUsername, onChangeUsername }: WasherSel
   const { t } = useLanguage();
   const [visible, setVisible] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const [screenWidth, setScreenWidth] = React.useState(Dimensions.get("window").width);
   const anchorRef = React.useRef<View>(null);
   const [anchorPosition, setAnchorPosition] = React.useState({ x: 0, y: 0 });
+  
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+  
+  const isMobile = screenWidth < 600;
+  const filterInputStyle = React.useMemo(() => StyleSheet.create({
+    input: {
+      backgroundColor: "#FAFAFA",
+      height: isMobile ? 44 : 36,
+      maxWidth: isMobile ? "100%" : 190,
+    },
+  }), [isMobile]).input;
 
   const filteredWashers = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -294,7 +316,7 @@ function WasherSelect({ washers, selectedUsername, onChangeUsername }: WasherSel
             placeholder={allLabel}
             editable={false}
             right={<TextInput.Icon icon="menu-down" />}
-            style={styles.filterInput}
+            style={filterInputStyle}
           />
         </TouchableOpacity>
       </View>
@@ -306,13 +328,13 @@ function WasherSelect({ washers, selectedUsername, onChangeUsername }: WasherSel
         }}
         anchor={anchorPosition}
       >
-        <View style={styles.menuContent}>
+        <View style={staticStyles.menuContent}>
           <TextInput
             mode="flat"
             placeholder={t("newRecord.searchPlaceholder")}
             value={search}
             onChangeText={setSearch}
-            style={styles.searchInput}
+            style={staticStyles.searchInput}
           />
           <Menu.Item
             title={allLabel}
@@ -339,8 +361,25 @@ type PaymentMethodSelectProps = {
 function PaymentMethodSelect({ selected, onSelect }: PaymentMethodSelectProps) {
   const { t } = useLanguage();
   const [visible, setVisible] = React.useState(false);
+  const [screenWidth, setScreenWidth] = React.useState(Dimensions.get("window").width);
   const anchorRef = React.useRef<View>(null);
   const [anchorPosition, setAnchorPosition] = React.useState({ x: 0, y: 0 });
+  
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+  
+  const isMobile = screenWidth < 600;
+  const filterInputStyle = React.useMemo(() => StyleSheet.create({
+    input: {
+      backgroundColor: "#FAFAFA",
+      height: isMobile ? 44 : 36,
+      maxWidth: isMobile ? "100%" : 190,
+    },
+  }), [isMobile]).input;
 
   const options: { value: PaymentFilter; label: string }[] = [
     { value: "all", label: t("filters.all") },
@@ -378,7 +417,7 @@ function PaymentMethodSelect({ selected, onSelect }: PaymentMethodSelectProps) {
             value={displayLabel}
             editable={false}
             right={<TextInput.Icon icon="menu-down" />}
-            style={styles.filterInput}
+            style={filterInputStyle}
           />
         </TouchableOpacity>
       </View>
@@ -407,8 +446,25 @@ type WashStatusSelectProps = {
 function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
   const { t } = useLanguage();
   const [visible, setVisible] = React.useState(false);
+  const [screenWidth, setScreenWidth] = React.useState(Dimensions.get("window").width);
   const anchorRef = React.useRef<View>(null);
   const [anchorPosition, setAnchorPosition] = React.useState({ x: 0, y: 0 });
+  
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+  
+  const isMobile = screenWidth < 600;
+  const filterInputStyle = React.useMemo(() => StyleSheet.create({
+    input: {
+      backgroundColor: "#FAFAFA",
+      height: isMobile ? 44 : 36,
+      maxWidth: isMobile ? "100%" : 190,
+    },
+  }), [isMobile]).input;
 
   const options: { value: StatusFilterValue; label: string }[] = [
     { value: "all", label: t("filters.all") },
@@ -481,7 +537,7 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
             value={getDisplayLabel()}
             editable={false}
             right={<TextInput.Icon icon="menu-down" />}
-            style={styles.filterInput}
+            style={filterInputStyle}
           />
         </TouchableOpacity>
       </View>
@@ -489,20 +545,20 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
         visible={visible}
         onDismiss={() => setVisible(false)}
         anchor={anchorPosition}
-        style={styles.statusMenu}
+        style={staticStyles.statusMenu}
       >
-        <ScrollView style={styles.statusMenuScroll}>
+        <ScrollView style={staticStyles.statusMenuScroll}>
           {options.map((option) => (
             <TouchableOpacity
               key={option.value}
-              style={styles.statusMenuItem}
+              style={staticStyles.statusMenuItem}
               onPress={() => handleToggle(option.value)}
             >
               <Checkbox
                 status={selected.has(option.value) ? "checked" : "unchecked"}
                 onPress={() => handleToggle(option.value)}
               />
-              <Text style={styles.statusMenuLabel}>{option.label}</Text>
+              <Text style={staticStyles.statusMenuLabel}>{option.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -511,96 +567,8 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    paddingHorizontal: 36,
-    paddingVertical: 16,
-    marginHorizontal: 8,
-    marginBottom: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  mainRow: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    gap: 60,
-    flexWrap: "nowrap",
-  },
-  resultsBlock: {
-    flexShrink: 0,
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    gap: 12,
-  },
-  resultItem: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 4,
-  },
-  resultLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#424242",
-  },
-  resultBox: {
-    backgroundColor: "#F5F5F5",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 124,
-    alignItems: "center",
-  },
-  resultValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2F80ED",
-  },
-  filtersBlock: {
-    flexShrink: 1,
-    flexGrow: 1,
-    alignItems: "flex-end",
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-end",
-    flexWrap: "nowrap",
-    justifyContent: "flex-end",
-  },
-  dateFieldSmall: {
-    width: 150,
-  },
-  dateInput: {
-    backgroundColor: "#FAFAFA",
-    height: 36,
-  },
-  filterColumn: {
-    flex: 1,
-    minWidth: 120,
-  },
-  filterColumnWasher: {
-    flex: 0.8,
-    minWidth: 100,
-  },
-  filterLabel: {
-    marginBottom: 4,
-    color: "#757575",
-  },
-  filterInput: {
-    backgroundColor: "#FAFAFA",
-    height: 36,
-    maxWidth: 190,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
+// Static styles for nested components (don't need to be responsive)
+const staticStyles = StyleSheet.create({
   menuContent: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -608,17 +576,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: 4,
-  },
-  filtersButton: {
-    alignSelf: "flex-end",
-  },
-  modalFiltersContainer: {
-    paddingVertical: 8,
-  },
-  modalFilterRow: {
-    flexDirection: "column",
-    gap: 16,
-    alignItems: "stretch",
   },
   statusMenu: {
     maxHeight: 300,
@@ -637,4 +594,128 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+// Create styles function that uses screen width
+const createStyles = (screenWidth: number) => {
+  const isMobile = screenWidth < 600;
+  const isTablet = screenWidth >= 600 && screenWidth < 1024;
+  
+  return StyleSheet.create({
+    container: {
+      borderTopWidth: 1,
+      borderTopColor: "#E0E0E0",
+      paddingHorizontal: isMobile ? 12 : isTablet ? 20 : 36,
+      paddingVertical: isMobile ? 12 : 16,
+      marginHorizontal: isMobile ? 4 : 8,
+      marginBottom: isMobile ? 4 : 8,
+      backgroundColor: "#FFFFFF",
+    },
+    mainRow: {
+      flexDirection: isMobile ? "column" : "row",
+      justifyContent: "flex-start",
+      alignItems: isMobile ? "stretch" : "flex-start",
+      gap: isMobile ? 16 : isTablet ? 24 : 60,
+      flexWrap: "wrap",
+    },
+    resultsBlock: {
+      flexShrink: 0,
+      flexDirection: "row",
+      flexWrap: isMobile ? "wrap" : "nowrap",
+      gap: isMobile ? 8 : 12,
+      width: isMobile ? "100%" : "auto",
+    },
+    resultItem: {
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 4,
+      flex: isMobile ? 1 : 0,
+      minWidth: isMobile ? "45%" : 124,
+    },
+    resultLabel: {
+      fontSize: isMobile ? 12 : isTablet ? 14 : 16,
+      fontWeight: "500",
+      color: "#424242",
+    },
+    resultBox: {
+      backgroundColor: "#F5F5F5",
+      borderWidth: 1,
+      borderColor: "#E0E0E0",
+      borderRadius: 4,
+      paddingHorizontal: isMobile ? 12 : 16,
+      paddingVertical: isMobile ? 6 : 8,
+      minWidth: isMobile ? "100%" : 124,
+      alignItems: "center",
+    },
+    resultValue: {
+      fontSize: isMobile ? 14 : isTablet ? 15 : 16,
+      fontWeight: "600",
+      color: "#2F80ED",
+    },
+    filtersBlock: {
+      flexShrink: 1,
+      flexGrow: isMobile ? 0 : 1,
+      alignItems: isMobile ? "stretch" : "flex-end",
+      width: isMobile ? "100%" : "auto",
+    },
+    filterRow: {
+      flexDirection: isMobile ? "column" : "row",
+      gap: isMobile ? 12 : isTablet ? 8 : 10,
+      alignItems: isMobile ? "stretch" : "flex-end",
+      flexWrap: "wrap",
+      justifyContent: isMobile ? "flex-start" : "flex-end",
+    },
+    dateFieldSmall: {
+      width: isMobile ? "100%" : isTablet ? 140 : 150,
+    },
+    dateInput: {
+      backgroundColor: "#FAFAFA",
+      height: isMobile ? 44 : 36,
+    },
+    filterColumn: {
+      flex: isMobile ? 0 : 1,
+      minWidth: isMobile ? "100%" : 120,
+    },
+    filterColumnWasher: {
+      flex: isMobile ? 0 : 0.8,
+      minWidth: isMobile ? "100%" : 100,
+    },
+    filterLabel: {
+      marginBottom: isMobile ? 6 : 4,
+      color: "#757575",
+      fontSize: isMobile ? 12 : undefined,
+    },
+    filterInput: {
+      backgroundColor: "#FAFAFA",
+      height: isMobile ? 44 : 36,
+      maxWidth: isMobile ? "100%" : 190,
+    },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  menuContent: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxHeight: 260,
+  },
+  searchInput: {
+    marginBottom: 4,
+  },
+    filtersButton: {
+      alignSelf: isMobile ? "stretch" : "flex-end",
+      width: isMobile ? "100%" : "auto",
+    },
+    modalFiltersContainer: {
+      paddingVertical: 8,
+    },
+    modalFilterRow: {
+      flexDirection: "column",
+      gap: 16,
+      alignItems: "stretch",
+    },
+  });
+};
+
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Dimensions,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -14,6 +15,8 @@ import {
   useTheme,
 } from "react-native-paper";
 import { searchVehicles, VehicleSearchResult } from "../services/vehicleService";
+
+// Screen dimensions will be checked dynamically in component
 
 type LicenseAutocompleteProps = {
   value: string;
@@ -41,6 +44,20 @@ export default function LicenseAutocomplete({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VehicleSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [screenDimensions, setScreenDimensions] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenDimensions({ width: window.width, height: window.height });
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  const isMobile = screenDimensions.width < 600;
+  const isMobileLandscape = isMobile && screenDimensions.width > screenDimensions.height;
 
   // Keep query in sync with external value when opening modal
   useEffect(() => {
@@ -83,9 +100,46 @@ export default function LicenseAutocomplete({
     [label, required]
   );
 
+  // Create responsive styles
+  const styles = useMemo(() => {
+    const isMobile = screenDimensions.width < 600;
+    const isMobileLandscape = isMobile && screenDimensions.width > screenDimensions.height;
+    const isTablet = screenDimensions.width >= 600 && screenDimensions.width < 1024;
+    
+    return StyleSheet.create({
+      fieldContainer: {
+        marginBottom: isMobileLandscape ? 4 : isMobile ? 4 : isTablet ? 12 : 20,
+        minHeight: isMobile && !isMobileLandscape ? 70 : undefined,
+      },
+      label: {
+        marginBottom: isMobileLandscape ? 3 : isMobile ? 4 : isTablet ? 6 : 8,
+        color: "#424242",
+        fontWeight: "500",
+        fontSize: isMobileLandscape ? 11 : isMobile ? 12 : undefined,
+        flexWrap: "wrap",
+        flexShrink: 1,
+      },
+      input: {
+        backgroundColor: "#FAFAFA",
+        height: isMobileLandscape ? 36 : isMobile ? 44 : isTablet ? 48 : undefined,
+      },
+      inputContent: {
+        backgroundColor: "#FAFAFA",
+        fontSize: isMobileLandscape ? 12 : isMobile ? 14 : undefined,
+        paddingVertical: isMobileLandscape ? 4 : isMobile ? 8 : undefined,
+      },
+      modal: {
+        marginHorizontal: isMobileLandscape ? 8 : isMobile ? 12 : 16,
+        borderRadius: 12,
+        padding: isMobileLandscape ? 8 : isMobile ? 12 : 16,
+        maxHeight: isMobileLandscape ? screenDimensions.height * 0.6 : isMobile ? screenDimensions.height * 0.7 : screenDimensions.height * 0.8,
+      },
+    });
+  }, [screenDimensions]);
+
   return (
     <View style={styles.fieldContainer}>
-      <Text variant="labelMedium" style={styles.label}>
+      <Text variant="labelMedium" style={styles.label} numberOfLines={2} ellipsizeMode="tail">
         {displayLabel}
       </Text>
       <TouchableOpacity
@@ -117,7 +171,7 @@ export default function LicenseAutocomplete({
             { backgroundColor: theme.colors.surface },
           ]}
         >
-          <Text variant="titleMedium" style={{ marginBottom: 12 }}>
+          <Text variant="titleMedium" style={{ marginBottom: isMobileLandscape ? 6 : isMobile ? 8 : 12, fontSize: isMobileLandscape ? 13 : isMobile ? 16 : undefined }}>
             Select {label}
           </Text>
           <TextInput
@@ -131,16 +185,18 @@ export default function LicenseAutocomplete({
             style={styles.input}
             contentStyle={styles.inputContent}
           />
-          <Divider style={{ marginVertical: 12 }} />
+          <Divider style={{ marginVertical: isMobileLandscape ? 6 : isMobile ? 8 : 12 }} />
           {loading ? (
-            <Text style={{ color: "#757575" }}>Searching...</Text>
+            <Text style={{ color: "#757575", fontSize: isMobileLandscape ? 11 : isMobile ? 13 : undefined }}>Searching...</Text>
           ) : (
-            <View style={{ maxHeight: 360 }}>
+            <View style={{ maxHeight: isMobileLandscape ? screenDimensions.height * 0.4 : isMobile ? screenDimensions.height * 0.4 : 360 }}>
               {results.map((v) => (
                 <List.Item
                   key={v.id}
                   title={v.licensePlate}
                   description={v.carCategory}
+                  titleStyle={{ fontSize: isMobileLandscape ? 12 : isMobile ? 14 : undefined }}
+                  descriptionStyle={{ fontSize: isMobileLandscape ? 10 : isMobile ? 12 : undefined }}
                   onPress={() => {
                     onChange(v.licensePlate);
                     if (onVehicleSelected) onVehicleSelected(v);
@@ -153,7 +209,7 @@ export default function LicenseAutocomplete({
               {results.length === 0 && query.trim().length > 0 && !loading && (
                 <Text
                   variant="bodyMedium"
-                  style={{ color: "#757575", padding: 12 }}
+                  style={{ color: "#757575", padding: isMobileLandscape ? 6 : isMobile ? 8 : 12, fontSize: isMobileLandscape ? 11 : isMobile ? 13 : undefined }}
                 >
                   No matching vehicles. The plate will be saved as new.
                 </Text>
@@ -165,26 +221,3 @@ export default function LicenseAutocomplete({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    marginBottom: 8,
-    color: "#424242",
-    fontWeight: "500",
-  },
-  input: {
-    backgroundColor: "#FAFAFA",
-  },
-  inputContent: {
-    backgroundColor: "#FAFAFA",
-  },
-  modal: {
-    marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 16,
-  },
-});
-

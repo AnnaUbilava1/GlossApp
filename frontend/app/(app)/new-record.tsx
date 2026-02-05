@@ -43,14 +43,38 @@ import {
   getWashTypeConfigs,
 } from "../../src/services/typeConfigService";
 
-const { width } = Dimensions.get("window");
-const isTablet = width >= 768;
+// These will be calculated dynamically in the component
 
 export default function NewRecordScreen() {
   const theme = useTheme();
   const auth = useAuth();
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState("new-record");
+  const [screenDimensions, setScreenDimensions] = useState(() => {
+    const { width, height } = Dimensions.get("window");
+    return { width, height };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenDimensions({ width: window.width, height: window.height });
+      // Update styles when dimensions change
+      styles = createStyles(
+        window.width < 600,
+        window.width < 600 && window.width > window.height,
+        window.width >= 600 && window.width < 1024,
+        window.width >= 1024,
+        window.height
+      );
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  // Calculate responsive breakpoints dynamically
+  const isMobile = screenDimensions.width < 600;
+  const isMobileLandscape = isMobile && screenDimensions.width > screenDimensions.height;
+  const isTablet = screenDimensions.width >= 600 && screenDimensions.width < 1024;
+  const isDesktop = screenDimensions.width >= 1024;
   
   // Get record count for tab display
   const { records } = useDashboard(auth.token);
@@ -382,7 +406,7 @@ export default function NewRecordScreen() {
 
     return (
       <View style={styles.fieldContainer}>
-        <Text variant="labelMedium" style={styles.label}>
+        <Text variant="labelMedium" style={styles.label} numberOfLines={2} ellipsizeMode="tail">
           {label} {required && "*"}
         </Text>
         <TouchableOpacity
@@ -409,7 +433,7 @@ export default function NewRecordScreen() {
             }}
             contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.surface }]}
           >
-            <Text variant="titleMedium" style={{ marginBottom: 12 }}>
+            <Text variant="titleMedium" style={{ marginBottom: isMobileLandscape ? 8 : 12, fontSize: isMobileLandscape ? 14 : undefined }}>
               {t("newRecord.selectPlaceholder")} {label}
             </Text>
             <TextInput
@@ -420,12 +444,13 @@ export default function NewRecordScreen() {
               style={styles.input}
               contentStyle={styles.inputContent}
             />
-            <Divider style={{ marginVertical: 12 }} />
-            <ScrollView style={{ maxHeight: 360 }}>
+            <Divider style={{ marginVertical: isMobileLandscape ? 8 : 52 }} />
+            <ScrollView style={{ maxHeight: isMobileLandscape ? screenDimensions.height * 0.5 : isMobile ? screenDimensions.height * 0.4 : 360 }}>
               {filtered.map((o) => (
                 <List.Item
                   key={o.key}
                   title={o.label}
+                  titleStyle={{ fontSize: isMobileLandscape ? 12 : isMobile ? 14 : undefined }}
                   onPress={() => {
                     onSelect(o.key);
                     setVisible(false);
@@ -434,7 +459,7 @@ export default function NewRecordScreen() {
                 />
               ))}
               {filtered.length === 0 && (
-                <Text variant="bodyMedium" style={{ color: "#757575", padding: 12 }}>
+                <Text variant="bodyMedium" style={{ color: "#757575", padding: isMobileLandscape ? 6 : isMobile ? 8 : 12, fontSize: isMobileLandscape ? 11 : isMobile ? 13 : undefined }}>
                   {t("newRecord.noResults")}
                 </Text>
               )}
@@ -443,7 +468,7 @@ export default function NewRecordScreen() {
         </Portal>
       </View>
     );
-  }
+  };
 
   const renderInput = (
     label: string,
@@ -454,7 +479,7 @@ export default function NewRecordScreen() {
     disabled = false
   ) => (
     <View style={styles.fieldContainer}>
-      <Text variant="labelMedium" style={styles.label}>
+      <Text variant="labelMedium" style={styles.label} numberOfLines={2} ellipsizeMode="tail">
         {label} {required && "*"}
       </Text>
       <TextInput
@@ -483,10 +508,12 @@ export default function NewRecordScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
         >
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <TabNavigation
@@ -498,11 +525,13 @@ export default function NewRecordScreen() {
               onTabChange={handleTabChange}
             />
 
-            <View style={styles.formHeader}>
-              <Text variant="titleLarge" style={styles.formTitle}>
-                {t("newRecord.title")}
-              </Text>
-            </View>
+            {!isMobile && (
+              <View style={styles.formHeader}>
+                <Text variant="titleLarge" style={styles.formTitle}>
+                  {t("newRecord.title")}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.formContainer}>
               {!!error && (
@@ -514,7 +543,7 @@ export default function NewRecordScreen() {
               {/* Two Column Layout */}
               <View style={styles.twoColumnContainer}>
                 {/* Left Column */}
-                <View style={styles.column}>
+                <View style={[styles.column, styles.leftcolumn]}>
                   <LicenseAutocomplete
                     label={t("newRecord.licensePlate")}
                     value={licensePlate}
@@ -705,7 +734,8 @@ export default function NewRecordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// Create styles function that uses screen dimensions
+const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: boolean, isDesktop: boolean, height: number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -716,11 +746,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: isTablet ? 24 : 16,
+    padding: isMobileLandscape ? 8 : isMobile ? 6 : isTablet ? 12 : 24,
+    paddingHorizontal: isMobileLandscape ? 12 : undefined,
   },
   card: {
     borderRadius: 12,
-    padding: isTablet ? 32 : 24,
+    padding: isMobileLandscape ? 12 : isMobile ? 10 : isTablet ? 16 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -731,55 +762,78 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   formHeader: {
-    marginBottom: 24,
+    marginBottom: isMobileLandscape ? 8 : isMobile ? 12 : isTablet ? 16 : 24,
   },
   formTitle: {
     fontWeight: "bold",
     color: "#212121",
+    fontSize: isMobileLandscape ? 16 : isMobile ? 18 : undefined,
   },
   formContainer: {
-    width: "100%",
+    width: "90%",
+    alignSelf: "center",
   },
   twoColumnContainer: {
-    flexDirection: isTablet ? "row" : "column",
-    gap: 16,
-    marginBottom: 24,
+    flexDirection: isMobileLandscape ? "row" : isMobile ? "column" : isTablet ? "row" : "row",
+    gap: isMobileLandscape ? 8 : isMobile ? 6 : isTablet ? 12 : 16,
+    marginBottom: isMobileLandscape ? 8 : isMobile ? 0 : isTablet ? 12 : 24,
   },
   column: {
     flex: 1,
     gap: 0,
+    minWidth: isMobileLandscape ? 0 : undefined,
+  },
+  leftcolumn: {
+    marginBottom: isMobileLandscape ? 8 : isMobile ? 70 : isTablet ? 12 : 24,
   },
   fieldContainer: {
-    marginBottom: 20,
+    marginBottom: isMobileLandscape ? 4 : isMobile ? 4 : isTablet ? 12 : 20,
+    minHeight: isMobile && !isMobileLandscape ? 70 : undefined,
   },
   label: {
-    marginBottom: 8,
+    marginBottom: isMobileLandscape ? 3 : isMobile ? 4 : isTablet ? 6 : 8,
     color: "#424242",
     fontWeight: "500",
+    fontSize: isMobileLandscape ? 11 : isMobile ? 12 : isTablet ? 13 : undefined,
+    flexWrap: "wrap",
+    flexShrink: 1,
   },
   input: {
     backgroundColor: "#FAFAFA",
+    height: isMobileLandscape ? 36 : isMobile ? 44 : isTablet ? 48 : undefined,
   },
   inputContent: {
     backgroundColor: "#FAFAFA",
+    fontSize: isMobileLandscape ? 12 : isMobile ? 14 : undefined,
+    paddingVertical: isMobileLandscape ? 4 : isMobile ? 8 : undefined,
   },
   dropdownContainer: {
     position: "relative",
   },
   modal: {
-    marginHorizontal: 16,
+    marginHorizontal: isMobileLandscape ? 8 : isMobile ? 12 : 16,
     borderRadius: 12,
-    padding: 16,
+    padding: isMobileLandscape ? 8 : isMobile ? 12 : 16,
+    maxHeight: isMobileLandscape ? height * 0.6 : isMobile ? height * 0.7 : height * 0.8,
   },
   addButton: {
     backgroundColor: "#2F80ED",
     borderRadius: 8,
-    marginTop: 8,
+    marginTop: isMobileLandscape ? 2 : isMobile ? 0 : 8,
     alignSelf: "center",
-    minWidth: 200,
+    minWidth: isMobileLandscape ? 120 : isMobile ? 150 : 200,
   },
   addButtonContent: {
-    paddingVertical: 8,
+    paddingVertical: isMobileLandscape ? 4 : isMobile ? 6 : 8,
   },
 });
+
+// Initialize styles - will be recalculated on dimension changes
+let styles = createStyles(
+  Dimensions.get("window").width < 600,
+  Dimensions.get("window").width < 600 && Dimensions.get("window").width > Dimensions.get("window").height,
+  Dimensions.get("window").width >= 600 && Dimensions.get("window").width < 1024,
+  Dimensions.get("window").width >= 1024,
+  Dimensions.get("window").height
+);
 
