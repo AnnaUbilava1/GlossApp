@@ -7,6 +7,10 @@ import { AuthProvider } from "../src/context/AuthContext";
 import { LanguageProvider } from "../src/context/LanguageContext";
 import { lightTheme } from "../src/utils/theme";
 import { useProtectedRoute } from "../src/hooks/useProtectedRoute";
+import { setupGlobalFetchInterceptor } from "../src/utils/fetchSetup";
+
+// Setup global fetch interceptor early to fix expo-platform header issues
+setupGlobalFetchInterceptor();
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

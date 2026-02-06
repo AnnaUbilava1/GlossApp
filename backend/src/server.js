@@ -110,8 +110,11 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+// Listen on 0.0.0.0 to allow connections from other devices on the network
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}/api-docs`);
+  console.log(`🌐 Network access: http://[YOUR_IP]:${PORT}/api-docs`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
