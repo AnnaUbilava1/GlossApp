@@ -19,7 +19,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.loginFailed": "შესვლა ვერ მოხერხდა",
 
     // Header
-    "header.appName": "სარეცხი მანქანების მენეჯერი",
+    "header.appName": "ავტოსამრეცხაოს მენეჯერი",
     "header.admin": "ადმინი",
     "header.logout": "გასვლა",
 

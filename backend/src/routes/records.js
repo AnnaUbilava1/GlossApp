@@ -860,6 +860,9 @@ router.put(
   ],
   async (req, res) => {
     try {
+      const langHeader = String(req.headers['x-language'] || '').toLowerCase();
+      const lang = langHeader === 'en' ? 'en' : 'ka';
+      
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -1038,14 +1041,63 @@ router.put(
         },
       });
 
-      const typeLabels = await getTypeLabels(prisma, lang);
-      res.json({ record: recordToLegacy(record, lang, typeLabels), rawRecord: record });
+      // Generate response - wrap in try-catch to ensure we return success even if formatting fails
+      // The record was successfully updated, so we must return a success response
+      let responseData;
+      try {
+        const typeLabels = await getTypeLabels(prisma, lang);
+        const legacyRecord = recordToLegacy(record, lang, typeLabels);
+        responseData = { record: legacyRecord, rawRecord: record };
+      } catch (formatError) {
+        // If formatting fails, try with null typeLabels
+        try {
+          console.error('Response formatting error (trying fallback):', formatError);
+          const legacyRecord = recordToLegacy(record, lang, null);
+          responseData = { record: legacyRecord, rawRecord: record };
+        } catch (fallbackError) {
+          // If even fallback fails, return minimal success response
+          // The record WAS updated successfully, so we return success
+          console.error('Response formatting fallback also failed (record was updated successfully):', fallbackError);
+          console.error('Fallback error details:', {
+            message: fallbackError.message,
+            stack: fallbackError.stack,
+          });
+          // Return a minimal success response - the record was updated successfully
+          responseData = { 
+            success: true,
+            message: 'Record updated successfully',
+            rawRecord: record 
+          };
+        }
+      }
+      
+      // Send the response - this should never fail, but if it does, log it
+      try {
+        return res.json(responseData);
+      } catch (sendError) {
+        console.error('Failed to send response (record was updated successfully):', sendError);
+        // If we can't send JSON, try to send a simple text response
+        if (!res.headersSent) {
+          return res.status(200).send('Record updated successfully');
+        }
+      }
     } catch (error) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Record not found' });
       }
       console.error('Update record error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+      });
+      // Only send error response if headers haven't been sent
+      if (!res.headersSent) {
+        return res.status(500).json({ error: 'Internal server error' });
+      } else {
+        console.error('Headers already sent, cannot send error response');
+      }
     }
   }
 );
