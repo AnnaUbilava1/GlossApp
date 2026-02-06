@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Dimensions, ScrollView, StyleSheet } from "react-native";
 import { Button, Dialog, Portal, Text, TextInput } from "react-native-paper";
 import { MASTER_PIN } from "../utils/constants";
 
@@ -21,6 +21,11 @@ export default function MasterPinModal({
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Detect landscape mode
+  const { width, height } = Dimensions.get("window");
+  const isLandscape = width > height;
+  const isMobile = width < 600;
 
   const handleClose = () => {
     if (!submitting) {
@@ -53,24 +58,40 @@ export default function MasterPinModal({
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={handleClose}>
+      <Dialog 
+        visible={visible} 
+        onDismiss={handleClose}
+        style={[
+          styles.dialog,
+          isMobile && isLandscape && styles.dialogLandscape
+        ]}
+      >
         <Dialog.Title>{title}</Dialog.Title>
-        <Dialog.Content>
-          <Text style={styles.description}>{description}</Text>
-          <TextInput
-            label="Master PIN"
-            value={pin}
-            onChangeText={(text) => {
-              setPin(text);
-              if (error) setError(null);
-            }}
-            secureTextEntry
-            keyboardType="number-pad"
-            style={styles.input}
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </Dialog.Content>
-        <Dialog.Actions>
+        <Dialog.ScrollArea style={styles.scrollArea}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Dialog.Content style={styles.dialogContent}>
+              <Text style={styles.description}>{description}</Text>
+              <TextInput
+                label="Master PIN"
+                value={pin}
+                onChangeText={(text) => {
+                  setPin(text);
+                  if (error) setError(null);
+                }}
+                secureTextEntry
+                keyboardType="number-pad"
+                style={styles.input}
+                autoFocus={false}
+              />
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </Dialog.Content>
+          </ScrollView>
+        </Dialog.ScrollArea>
+        <Dialog.Actions style={styles.dialogActions}>
           <Button onPress={handleClose} disabled={submitting}>
             Cancel
           </Button>
@@ -89,6 +110,27 @@ export default function MasterPinModal({
 }
 
 const styles = StyleSheet.create({
+  dialog: {
+    maxHeight: "90%",
+    marginHorizontal: 20,
+  },
+  dialogLandscape: {
+    maxHeight: "80%",
+    marginHorizontal: 30,
+    marginTop: 20,
+  },
+  scrollArea: {
+    maxHeight: 200,
+    paddingHorizontal: 0,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 8,
+  },
+  dialogContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
   description: {
     marginBottom: 8,
   },
@@ -98,6 +140,14 @@ const styles = StyleSheet.create({
   error: {
     marginTop: 4,
     color: "#D32F2F",
+  },
+  dialogActions: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    paddingTop: 8,
+    minHeight: 52,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.12)",
   },
 });
 
