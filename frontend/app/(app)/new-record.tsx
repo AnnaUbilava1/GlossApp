@@ -747,7 +747,7 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     flex: 1,
   },
   scrollContent: {
-    padding: isMobileLandscape ? 8 : isMobile ? 6 : isTablet ? 12 : 24,
+    padding: isMobileLandscape ? 8 : isMobile ? 4 : isTablet ? 12 : 24,
     paddingHorizontal: isMobileLandscape ? 12 : undefined,
   },
   card: {
