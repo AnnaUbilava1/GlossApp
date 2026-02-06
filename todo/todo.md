@@ -70,6 +70,10 @@ The project uses a modern tech stack with Expo Router for the frontend and Node.
   - [x] Implement token injection in requests
   - [x] Set up error handling for API calls
   - [x] Configure base URL from environment variables
+  - [x] Enhanced error handling for non-JSON responses (404, network errors)
+  - [x] Fixed malformed API URL detection and auto-correction
+  - [x] Added global fetch interceptor for Expo platform header support
+  - [x] Improved network error messages and debugging
 
 ---
 
@@ -328,6 +332,8 @@ The project uses a modern tech stack with Expo Router for the frontend and Node.
   - [x] Add validation error messages
   - [x] Implement proper HTTP status codes
   - [x] Add error logging
+  - [x] Fixed JSON parsing errors for non-JSON error responses
+  - [x] Improved 404 error handling with proper error messages
 
 ### Developer B (Frontend Polish)
 
@@ -343,6 +349,8 @@ The project uses a modern tech stack with Expo Router for the frontend and Node.
   - [x] Standardize spacing and typography
   - [x] Add proper loading indicators
   - [x] Implement error boundaries
+  - [x] Fixed cross-platform compatibility (iOS, Android phones, tablets)
+  - [x] Resolved Expo Router platform header issues for all devices
 
 - [x] **Edit Record Screen**
   - [x] Create `app/(app)/edit-record/[id].tsx`
@@ -603,6 +611,9 @@ The project uses a modern tech stack with Expo Router for the frontend and Node.
 - ✅ Multi-language support (Georgian/English)
 - ✅ Status-based record color coding
 - ✅ Payment tracking (cash/card)
+- ✅ Cross-platform compatibility (iOS, Android phones, tablets)
+- ✅ Robust API error handling and network error recovery
+- ✅ Global fetch interceptor for Expo platform support
 
 ### Future Considerations
 
@@ -612,6 +623,26 @@ The project uses a modern tech stack with Expo Router for the frontend and Node.
 - Production deployment
 - Performance optimizations
 - Offline support capabilities
+
+---
+
+## 🐛 Recent Bug Fixes & Improvements
+
+### API & Network Improvements
+- [x] **Fixed JSON parsing errors** - Enhanced error handling to gracefully handle non-JSON responses (404 "Not found" errors)
+- [x] **Fixed malformed API URL detection** - Added automatic detection and correction of incorrectly configured API URLs
+- [x] **Improved network error messages** - Better error messages for network failures with actionable debugging information
+- [x] **Enhanced API error handling** - Proper handling of HTTP errors with fallback error messages
+
+### Cross-Platform Compatibility
+- [x] **Fixed Expo platform header issue** - Created global fetch interceptor to add `expo-platform` header to all requests
+- [x] **Resolved tablet-specific errors** - Fixed "Must specify expo-platform header" error on Android tablets
+- [x] **Improved platform detection** - Enhanced platform detection for iOS, Android phones, and tablets
+- [x] **Fixed cross-device network issues** - Improved handling of network requests across different devices and network configurations
+
+### Configuration & Setup
+- [x] **Improved API URL configuration** - Enhanced `config.ts` with better URL validation and debugging
+- [x] **Added development logging** - Console logging for API URLs in development mode for easier debugging
 
 ---
 
