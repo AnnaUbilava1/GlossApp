@@ -153,6 +153,7 @@ export default function LicenseAutocomplete({
           value={value}
           onChangeText={(text) => onChange(text)}
           editable={false}
+          pointerEvents="none"
           style={styles.input}
           contentStyle={styles.inputContent}
         />

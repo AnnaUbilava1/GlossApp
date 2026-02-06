@@ -419,6 +419,7 @@ export default function NewRecordScreen() {
             placeholder={`${t("newRecord.selectPlaceholder")} ${label}`}
             value={valueText}
             editable={false}
+            pointerEvents="none"
             style={styles.input}
             contentStyle={styles.inputContent}
           />
@@ -784,7 +785,7 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     minWidth: isMobileLandscape ? 0 : undefined,
   },
   leftcolumn: {
-    marginBottom: isMobileLandscape ? 8 : isMobile ? 70 : isTablet ? 12 : 24,
+    marginBottom: isMobileLandscape ? 8 : isMobile ? 2 : isTablet ? 12 : 24,
   },
   fieldContainer: {
     marginBottom: isMobileLandscape ? 4 : isMobile ? 4 : isTablet ? 12 : 20,

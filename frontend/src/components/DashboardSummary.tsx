@@ -420,6 +420,7 @@ function WasherSelect({ washers, selectedUsername, onChangeUsername }: WasherSel
             value={displayLabel}
             placeholder={allLabel}
             editable={false}
+            pointerEvents="none"
             right={<TextInput.Icon icon="menu-down" />}
             style={filterInputStyle}
           />
@@ -521,6 +522,7 @@ function PaymentMethodSelect({ selected, onSelect }: PaymentMethodSelectProps) {
             mode="outlined"
             value={displayLabel}
             editable={false}
+            pointerEvents="none"
             right={<TextInput.Icon icon="menu-down" />}
             style={filterInputStyle}
           />
@@ -641,6 +643,7 @@ function WashStatusSelect({ selected, onSelect }: WashStatusSelectProps) {
             mode="outlined"
             value={getDisplayLabel()}
             editable={false}
+            pointerEvents="none"
             right={<TextInput.Icon icon="menu-down" />}
             style={filterInputStyle}
           />
