@@ -174,17 +174,19 @@ const styles = StyleSheet.create({
   },
   actionsCell: {
     flex: 1.5,
-    minWidth: 150,
-    maxWidth: 200, // Prevent excessive spreading
+    minWidth: 180, // Increased for Georgian text and buttons
+    maxWidth: 240, // Increased max width
     justifyContent: "center",
     alignItems: "flex-start", // Align content to start for consistency
+    paddingRight: 8, // Add padding to prevent clipping
   },
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     width: "100%",
-    minWidth: 150, // Maintain minimum width
+    minWidth: 180, // Increased minimum width
+    flexWrap: "nowrap", // Prevent wrapping
   },
   finishButton: {
     backgroundColor: "#FF9800",

@@ -275,24 +275,31 @@ export default function DashboardScreen() {
 
           {!isMobile ? (
             isDesktop ? (
-              <DataTable style={styles.table}>
-                <DataTable.Header>
-                  <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
-                </DataTable.Header>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={true}
+                style={styles.tableScrollView}
+                contentContainerStyle={styles.tableScrollContent}
+              >
+                <DataTable style={styles.table}>
+                  <DataTable.Header>
+                    <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
+                  </DataTable.Header>
 
-                {filteredRecords.map((record) => renderRecordRow(record))}
-              </DataTable>
+                  {filteredRecords.map((record) => renderRecordRow(record))}
+                </DataTable>
+              </ScrollView>
             ) : (
               <ScrollView 
                 horizontal 
@@ -524,9 +531,11 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
   },
   tableScrollView: {
     flexGrow: 0,
+    width: "100%",
   },
   tableScrollContent: {
     flexGrow: 0,
+    paddingRight: 8, // Add padding to ensure buttons are fully visible
   },
   table: {
     backgroundColor: "transparent",
@@ -579,10 +588,11 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
   },
   actionsCell: {
     flex: 1.5,
-    minWidth: isMediumTablet ? 140 : isMobileLandscape ? 145 : 150,
-    maxWidth: isMediumTablet ? 180 : isMobileLandscape ? 190 : 200, // Prevent excessive spreading
+    minWidth: isMediumTablet ? 160 : isMobileLandscape ? 170 : 180, // Increased for Georgian text
+    maxWidth: isMediumTablet ? 200 : isMobileLandscape ? 220 : 240, // Increased max width
     justifyContent: "center",
     alignItems: "flex-start", // Align content consistently
+    paddingRight: 8, // Add padding to prevent clipping
   },
   cellText: {
     fontSize: isMediumTablet ? 11 : isMobileLandscape ? 11 : 12,
