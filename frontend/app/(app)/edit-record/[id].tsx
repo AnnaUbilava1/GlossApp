@@ -79,7 +79,7 @@ export default function EditRecordScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
   const auth = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   
   const [screenDimensions, setScreenDimensions] = useState(() => {
     const { width, height } = Dimensions.get("window");
@@ -160,10 +160,15 @@ export default function EditRecordScreen() {
         setServiceType(raw?.washType ?? data.record.serviceType ?? "");
         setCustomServiceName("");
       }
-      setManualPrice(data.record.price != null ? String(data.record.price) : "");
+      // For custom services, use originalPrice (the manually entered price)
+      // For regular services, price field is not editable so this doesn't matter
+      const priceToUse = isCustom 
+        ? (data.record.originalPrice != null ? String(data.record.originalPrice) : "")
+        : (data.record.price != null ? String(data.record.price) : "");
+      setManualPrice(priceToUse);
       setBoxNumber(String(raw?.boxNumber ?? data.record.boxNumber ?? 0));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load record");
+      setError(e instanceof Error ? e.message : t("records.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -215,11 +220,11 @@ export default function EditRecordScreen() {
   const handlePinConfirm = async (pin: string) => {
     setShowPinModal(false);
     if (!auth.token || !id || !selectedDiscount || !selectedWasher) {
-      setError("Missing required fields");
+      setError(t("records.missingFields"));
       return;
     }
     if (isCustomService && (!customServiceName.trim() || !manualPrice.trim())) {
-      setError("Custom service name and price are required");
+      setError(t("records.customServiceRequired"));
       return;
     }
     const pricePayload = isCustomService && manualPrice.trim() ? { price: parseFloat(manualPrice) || 0 } : {};
@@ -242,12 +247,12 @@ export default function EditRecordScreen() {
           ...pricePayload,
         }),
       });
-      setSuccessMessage("Record updated");
+      setSuccessMessage(t("records.updateSuccess"));
       setTimeout(() => {
         router.replace("/(app)/dashboard");
       }, 800);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update record");
+      setError(e instanceof Error ? e.message : t("records.updateFailed"));
     } finally {
       setSubmitLoading(false);
     }
@@ -288,7 +293,7 @@ export default function EditRecordScreen() {
         >
           <TextInput
             mode="outlined"
-            placeholder={`Select ${label}`}
+            placeholder={`${t("newRecord.selectPlaceholder")} ${label}`}
             value={valueText}
             editable={false}
             pointerEvents="none"
@@ -306,11 +311,11 @@ export default function EditRecordScreen() {
             contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.surface }]}
           >
             <Text variant="titleMedium" style={{ marginBottom: isMobileLandscape ? 8 : 12, fontSize: isMobileLandscape ? 14 : undefined }}>
-              Select {label}
+              {t("newRecord.selectPlaceholder")} {label}
             </Text>
             <TextInput
               mode="outlined"
-              placeholder="Search..."
+              placeholder={t("newRecord.searchPlaceholder")}
               value={query}
               onChangeText={setQuery}
               style={styles.input}
@@ -332,7 +337,7 @@ export default function EditRecordScreen() {
               ))}
               {filtered.length === 0 && (
                 <Text variant="bodyMedium" style={{ color: "#757575", padding: isMobileLandscape ? 6 : isMobile ? 8 : 12, fontSize: isMobileLandscape ? 11 : isMobile ? 13 : undefined }}>
-                  No results
+                  {t("newRecord.noResults")}
                 </Text>
               )}
             </ScrollView>
@@ -377,7 +382,7 @@ export default function EditRecordScreen() {
           onLogout={() => { auth.logout(); router.replace("/(auth)"); }}
         />
         <View style={styles.centered}>
-          <Text variant="bodyLarge">Loading record...</Text>
+          <Text variant="bodyLarge">{t("records.loadingRecord")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -392,9 +397,9 @@ export default function EditRecordScreen() {
           onLogout={() => { auth.logout(); router.replace("/(auth)"); }}
         />
         <View style={styles.centered}>
-          <Text variant="bodyLarge">Record not found</Text>
+          <Text variant="bodyLarge">{t("records.recordNotFound")}</Text>
           <Button mode="outlined" onPress={() => router.back()} style={{ marginTop: 16 }}>
-            Back
+            {t("button.back")}
           </Button>
         </View>
       </SafeAreaView>
@@ -423,7 +428,7 @@ export default function EditRecordScreen() {
             {!isMobile && (
               <View style={styles.formHeader}>
                 <Text variant="titleLarge" style={styles.formTitle}>
-                  Edit Record
+                  {t("records.editRecordTitle")}
                 </Text>
               </View>
             )}
@@ -440,6 +445,7 @@ export default function EditRecordScreen() {
                 {/* Left Column */}
                 <View style={[styles.column, styles.leftcolumn]}>
                 <LicenseAutocomplete
+                  label={t("newRecord.licensePlate")}
                   value={licensePlate}
                   onChange={setLicensePlate}
                   token={auth.token}
@@ -449,7 +455,7 @@ export default function EditRecordScreen() {
                   }}
                 />
                 <SearchableSelect
-                  label="Company & Discount"
+                  label={t("newRecord.companyDiscount")}
                   required
                   valueText={selectedDiscount?.label ?? ""}
                   options={discountOptions.map((o) => ({
@@ -465,7 +471,7 @@ export default function EditRecordScreen() {
                   }}
                 />
                 <SearchableSelect
-                  label="Car Category"
+                  label={t("newRecord.carCategory")}
                   required
                   valueText={
                     carType
@@ -488,11 +494,11 @@ export default function EditRecordScreen() {
                   onSelect={setCarType}
                 />
                 <SearchableSelect
-                  label="Wash Type"
+                  label={t("newRecord.washType")}
                   required
                   valueText={
                     isCustomService
-                      ? "Custom Service"
+                      ? t("newRecord.customService")
                       : serviceType
                         ? (washTypeConfigs.find((w) => w.code === serviceType)
                             ? language === "en"
@@ -509,7 +515,7 @@ export default function EditRecordScreen() {
                         key: w.code,
                         label: language === "en" ? w.displayNameEn : w.displayNameKa,
                       })),
-                    { key: "__CUSTOM__", label: "Custom Service" },
+                    { key: "__CUSTOM__", label: t("newRecord.customService") },
                   ]}
                   onSelect={(key) => {
                     if (key === "__CUSTOM__") {
@@ -528,15 +534,15 @@ export default function EditRecordScreen() {
                 {isCustomService && (
                   <>
                     {renderInput(
-                      "Custom Service Name",
+                      t("newRecord.customServiceName"),
                       customServiceName,
                       setCustomServiceName,
-                      "e.g., Special Detail, Wax, etc.",
+                      t("newRecord.customServicePlaceholder"),
                       true,
                       false
                     )}
                     {renderInput(
-                      "Price (Manual Entry)",
+                      t("newRecord.priceManual"),
                       manualPrice,
                       setManualPrice,
                       "0.00",
@@ -550,7 +556,7 @@ export default function EditRecordScreen() {
                 {/* Right Column */}
                 <View style={styles.column}>
                   <SearchableSelect
-                    label="Washer"
+                    label={t("newRecord.washerUsername")}
                     required
                     valueText={selectedWasher ? selectedWasher.username : ""}
                     options={washers.map((w) => ({ key: String(w.id), label: w.username }))}
@@ -559,7 +565,7 @@ export default function EditRecordScreen() {
                       setSelectedWasher(w);
                     }}
                   />
-                  {renderInput("Box Number", boxNumber, setBoxNumber, "0", false, false)}
+                  {renderInput(t("newRecord.boxNumber"), boxNumber, setBoxNumber, "0", false, false)}
                 </View>
               </View>
 
@@ -572,11 +578,11 @@ export default function EditRecordScreen() {
                 loading={submitLoading}
                 disabled={submitLoading}
               >
-                Save Changes
+                {t("button.save")}
               </Button>
 
               <Button mode="outlined" onPress={() => router.back()} style={styles.cancelButton}>
-                Cancel
+                {t("button.cancel")}
               </Button>
             </View>
           </View>
@@ -596,8 +602,8 @@ export default function EditRecordScreen() {
         visible={showPinModal}
         onDismiss={() => setShowPinModal(false)}
         onCorrectPin={(pin) => handlePinConfirm(pin)}
-        title="Edit Record"
-        description="Enter Master PIN to save changes"
+        title={t("records.editRecordTitle")}
+        description={t("records.editRecordPinDescription")}
       />
     </SafeAreaView>
   );

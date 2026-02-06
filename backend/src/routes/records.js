@@ -67,9 +67,12 @@ function recordToLegacy(record, lang = 'ka', typeLabels = null) {
 
   const carType =
     typeLabels?.carLabels?.[record.carCategory] ?? getCarTypeLabel(record.carCategory, lang);
+  // For custom services, always use customServiceName if it exists (even if empty string)
+  // Otherwise, use the type label or fallback to wash type label
   const serviceType =
-    record.customServiceName ||
-    (typeLabels?.washLabels?.[record.washType] ?? getWashTypeLabel(record.washType, lang));
+    (record.customServiceName !== null && record.customServiceName !== undefined)
+      ? record.customServiceName
+      : (typeLabels?.washLabels?.[record.washType] ?? getWashTypeLabel(record.washType, lang));
 
   const companyName = record.companyName || record.company?.name || null;
   const companyDiscount =
@@ -526,9 +529,14 @@ router.post(
       
       let customServiceName = null;
       
-      // If no mapping found, check if it's a custom service
-      // Custom services must have a price provided
-      if (!washType) {
+      // If washType is explicitly set to CUSTOM, use customServiceName from request body
+      if (washType === 'CUSTOM') {
+        customServiceName = req.body.customServiceName 
+          ? String(req.body.customServiceName).trim() || null
+          : null;
+      } else if (!washType) {
+        // If no mapping found, check if it's a custom service
+        // Custom services must have a price provided
         // Check if price is provided (indicates custom service)
         // Price can be 0 or any number, just needs to be present
         const hasPrice = req.body.price !== undefined && req.body.price !== null;
@@ -921,8 +929,17 @@ router.put(
       
       let nextCustomServiceName = undefined;
       
-      // Handle custom service: if serviceType doesn't map and price is provided
-      if (!nextWashType && req.body.serviceType && req.body.price) {
+      // If washType is explicitly set to CUSTOM, use customServiceName from request body
+      if (nextWashType === 'CUSTOM') {
+        if (req.body.customServiceName) {
+          nextCustomServiceName = String(req.body.customServiceName).trim() || null;
+        } else if (req.body.serviceType && !LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType]) {
+          // Fallback: if customServiceName not provided but serviceType is not a predefined type, use it
+          nextCustomServiceName = String(req.body.serviceType).trim() || null;
+        }
+        // If customServiceName is explicitly null/empty and washType is CUSTOM, keep it null
+      } else if (!nextWashType && req.body.serviceType && req.body.price) {
+        // Handle custom service: if serviceType doesn't map and price is provided
         nextWashType = 'CUSTOM';
         nextCustomServiceName = req.body.serviceType;
       } else if (req.body.serviceType && LEGACY_SERVICE_TYPE_TO_SCHEMA[req.body.serviceType]) {
