@@ -74,7 +74,7 @@ export default function RecordItem({
       <DataTable.Cell style={styles.actionsCell}>
         <View style={styles.actionsContainer}>
           {/* Show buttons only if not both finished and paid */}
-          {!(record.isFinished && record.isPaid) && (
+          {!(record.isFinished && record.isPaid) ? (
             <>
               {/* Finish button - visible to all users */}
               <Button
@@ -100,6 +100,9 @@ export default function RecordItem({
                 </Button>
               )}
             </>
+          ) : (
+            // Empty spacer to maintain column width when buttons are hidden
+            <View style={styles.buttonSpacer} />
           )}
           {isAdmin && (
             <>
@@ -171,13 +174,19 @@ const styles = StyleSheet.create({
   },
   actionsCell: {
     flex: 1.5,
-    minWidth: 150,
+    minWidth: 180, // Increased for Georgian text and buttons
+    maxWidth: 240, // Increased max width
     justifyContent: "center",
+    alignItems: "flex-start", // Align content to start for consistency
+    paddingRight: 8, // Add padding to prevent clipping
   },
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    width: "100%",
+    minWidth: 180, // Increased minimum width
+    flexWrap: "nowrap", // Prevent wrapping
   },
   finishButton: {
     backgroundColor: "#FF9800",
@@ -202,6 +211,10 @@ const styles = StyleSheet.create({
   },
   paymentButtonLabelCondensed: {
     fontSize: 10,
+  },
+  buttonSpacer: {
+    width: 120, // Approximate width of two buttons to maintain alignment
+    minWidth: 120,
   },
 });
 

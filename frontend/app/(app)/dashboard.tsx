@@ -275,24 +275,31 @@ export default function DashboardScreen() {
 
           {!isMobile ? (
             isDesktop ? (
-              <DataTable style={styles.table}>
-                <DataTable.Header>
-                  <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
-                  <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
-                </DataTable.Header>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={true}
+                style={styles.tableScrollView}
+                contentContainerStyle={styles.tableScrollContent}
+              >
+                <DataTable style={styles.table}>
+                  <DataTable.Header>
+                    <DataTable.Title style={[styles.headerCell, styles.licenseCell]}>{t("records.licenseNumber")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.carTypeCell]}>{t("records.carType")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.companyCell]}>{t("records.companyDiscount")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.serviceCell]}>{t("records.service")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.originalPrice")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.price")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.priceCell]}>{t("records.washerCut")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.boxCell]}>{t("records.box")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.washerCell]}>{t("records.washer")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.startTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.timeCell]}>{t("records.endTime")}</DataTable.Title>
+                    <DataTable.Title style={[styles.headerCell, styles.actionsCell]}>{t("records.actions")}</DataTable.Title>
+                  </DataTable.Header>
 
-                {filteredRecords.map((record) => renderRecordRow(record))}
-              </DataTable>
+                  {filteredRecords.map((record) => renderRecordRow(record))}
+                </DataTable>
+              </ScrollView>
             ) : (
               <ScrollView 
                 horizontal 
@@ -339,20 +346,20 @@ export default function DashboardScreen() {
                       </Text>
                     </View>
                     <View style={styles.mobileCardBody}>
-                      <Text variant="bodyMedium">{record.carType} • {record.serviceType}</Text>
+                      <Text variant="bodyMedium">{record.carType} | {record.serviceType}</Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
-                        {t("records.originalPrice")}: {formatMoney(record.originalPrice ?? 0)} • {t("records.washerCut")}: {formatMoney(record.washerCut ?? 0)}
+                        {t("records.originalPrice")}: {formatMoney(record.originalPrice ?? 0)} | {t("records.washerCut")}: {formatMoney(record.washerCut ?? 0)}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileDetails}>
-                        Box {record.boxNumber} • {record.washerName}
+                        {t("records.boxLabel")} {record.boxNumber} | {record.washerName}
                       </Text>
                       <Text variant="bodySmall" style={styles.mobileTime}>
-                        Start: {formatDateTime(record.startTime)} | End: {formatDateTime(record.endTime)}
+                        {t("records.start")}: {formatDateTime(record.startTime)} | {t("records.end")}: {formatDateTime(record.endTime)}
                       </Text>
-                    </View>
+                        </View>
                     <View style={styles.mobileActions}>
                       {/* Show buttons only if not both finished and paid */}
-                      {!(record.isFinished && record.isPaid) && (
+                      {!(record.isFinished && record.isPaid) ? (
                         <>
                           {/* Finish button - visible to all users */}
                           <Button
@@ -378,6 +385,9 @@ export default function DashboardScreen() {
                             </Button>
                           )}
                         </>
+                      ) : (
+                        // Empty spacer to maintain layout consistency
+                        <View style={styles.mobileButtonSpacer} />
                       )}
                       {auth.user?.role === "admin" && (
                         <>
@@ -489,11 +499,12 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     flex: 1,
   },
   scrollContent: {
-    padding: isMobile ? 8 : isTablet ? 16 : 24,
+    padding: isMobileLandscape ? 8 : isMobile ? 4 : isTablet ? 12 : 24,
+    paddingHorizontal: isMobileLandscape ? 16 : undefined,
   },
   card: {
     borderRadius: 12,
-    padding: isMobile ? 12 : isTablet ? 20 : 32,
+    padding: isMobileLandscape ? 12 : isMobile ? 10 : isTablet ? 16 : 32,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -520,9 +531,11 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
   },
   tableScrollView: {
     flexGrow: 0,
+    width: "100%",
   },
   tableScrollContent: {
     flexGrow: 0,
+    paddingRight: 8, // Add padding to ensure buttons are fully visible
   },
   table: {
     backgroundColor: "transparent",
@@ -575,8 +588,11 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
   },
   actionsCell: {
     flex: 1.5,
-    minWidth: isMediumTablet ? 140 : isMobileLandscape ? 145 : 150,
+    minWidth: isMediumTablet ? 160 : isMobileLandscape ? 170 : 180, // Increased for Georgian text
+    maxWidth: isMediumTablet ? 200 : isMobileLandscape ? 220 : 240, // Increased max width
     justifyContent: "center",
+    alignItems: "flex-start", // Align content consistently
+    paddingRight: 8, // Add padding to prevent clipping
   },
   cellText: {
     fontSize: isMediumTablet ? 11 : isMobileLandscape ? 11 : 12,
@@ -589,6 +605,8 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    width: "100%",
+    minWidth: isMediumTablet ? 140 : isMobileLandscape ? 145 : 150, // Maintain minimum width
   },
   finishButton: {
     backgroundColor: "#FF9800",
@@ -612,12 +630,14 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     marginBottom: 16,
   },
   mobileContainer: {
-    gap: isMobile ? 8 : 12,
+    gap: isMobile ? 0 : 12,
   },
   mobileCard: {
     borderRadius: 8,
-    padding: isMobile ? 10 : 12,
+    padding: isMobile ? 10 : 14,
     marginBottom: isMobile ? 8 : 12,
+    minHeight: isMobile ? 120 : undefined,
+    overflow: "visible",
   },
   mobileCardHeader: {
     flexDirection: "row",
@@ -636,25 +656,28 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     fontWeight: "600",
   },
   mobileCardBody: {
-    marginBottom: isMobile ? 8 : 8,
+    marginBottom: isMobile ? 0 : 8,
     flexWrap: "wrap",
+    paddingBottom: isMobile ? 0 : 0,
   },
   mobileDetails: {
     color: "#757575",
     marginTop: isMobile ? 4 : 2,
-    fontSize: isMobile ? 12 : undefined,
+    fontSize: isMobile ? 11 : undefined,
+    lineHeight: isMobile ? 20 : undefined,
   },
   mobileTime: {
     color: "#757575",
     marginTop: isMobile ? 4 : 2,
     fontSize: isMobile ? 11 : undefined,
+    lineHeight: isMobile ? 20 : undefined,
   },
   mobileActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: isMobile ? 4 : 8,
     flexWrap: "wrap",
-    marginTop: isMobile ? 4 : 0,
+    marginVertical: 0
   },
   footer: {
     marginTop: 24,
@@ -673,6 +696,10 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
   },
   mobileButtonLabel: {
     fontSize: 11,
+  },
+  mobileButtonSpacer: {
+    width: isMobile ? 140 : 160, // Approximate width of buttons to maintain layout
+    minWidth: isMobile ? 140 : 160,
   },
 });
 

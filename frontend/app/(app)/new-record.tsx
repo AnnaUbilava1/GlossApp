@@ -576,134 +576,276 @@ export default function NewRecordScreen() {
                     }}
                   />
 
-                  {renderInput(
-                    t("newRecord.discountPercent"),
-                    selectedDiscount ? `${selectedDiscount.discountPercent}%` : "—",
-                    () => {},
-                    undefined,
-                    false,
-                    true
-                  )}
+                  {/* For mobile portrait: show autofilled fields last */}
+                  {isMobile && !isMobileLandscape ? (
+                    <>
+                      {/* Manual input fields first */}
+                      <SearchableSelect
+                        label={t("newRecord.carCategory")}
+                        required
+                        valueText={carType ? getCarTypeDisplayLabel(carType) : ""}
+                        options={availableCarTypes.map((c) => ({
+                          key: c,
+                          label: getCarTypeDisplayLabel(c),
+                        }))}
+                        onSelect={(key) => setCarType(key)}
+                      />
 
-                  {renderInput(
-                    t("newRecord.originalPrice"),
-                    loadingQuote ? t("newRecord.calculating") : formatMoney(originalPrice),
-                    () => {},
-                    undefined,
-                    false,
-                    true
-                  )}
+                      <SearchableSelect
+                        label={t("newRecord.washType")}
+                        required
+                        valueText={
+                          isCustomService
+                            ? t("newRecord.customService")
+                            : serviceType
+                            ? getWashTypeDisplayLabel(serviceType)
+                            : ""
+                        }
+                        options={[
+                          ...availableWashTypes.map((s) => ({
+                            key: s,
+                            label: getWashTypeDisplayLabel(s),
+                          })),
+                          { key: "__CUSTOM__", label: t("newRecord.customService") },
+                        ]}
+                        onSelect={(key) => {
+                          if (key === "__CUSTOM__") {
+                            setIsCustomService(true);
+                            setServiceType("");
+                            setCustomServiceName("");
+                            setManualPrice("");
+                            setOriginalPrice(null);
+                            setDiscountedPrice(null);
+                            setWasherCut(null);
+                          } else {
+                            setIsCustomService(false);
+                            setServiceType(key);
+                            setCustomServiceName("");
+                            setManualPrice("");
+                          }
+                        }}
+                      />
 
-                  {renderInput(
-                    t("newRecord.discountedPrice"),
-                    loadingQuote ? t("newRecord.calculating") : formatMoney(discountedPrice),
-                    () => {},
-                    undefined,
-                    false,
-                    true
-                  )}
+                      {isCustomService && (
+                        <>
+                          {renderInput(
+                            t("newRecord.customServiceName"),
+                            customServiceName,
+                            setCustomServiceName,
+                            t("newRecord.customServicePlaceholder"),
+                            true,
+                            false
+                          )}
+                          {renderInput(
+                            t("newRecord.priceManual"),
+                            manualPrice,
+                            setManualPrice,
+                            "0.00",
+                            true,
+                            false
+                          )}
+                        </>
+                      )}
 
-                  {renderInput(
-                    t("newRecord.washerCut"),
-                    loadingQuote ? t("newRecord.calculating") : formatMoney(washerCut),
-                    () => {},
-                    undefined,
-                    false,
-                    true
+                      <SearchableSelect
+                        label={t("newRecord.washerUsername")}
+                        required
+                        disabled={loadingInit}
+                        valueText={selectedWasher ? selectedWasher.username : ""}
+                        options={washers.map((w) => ({ key: String(w.id), label: w.username }))}
+                        onSelect={(key) => {
+                          const id = Number(key);
+                          const w = washers.find((x) => x.id === id) || null;
+                          setSelectedWasher(w);
+                        }}
+                      />
+
+                      {renderInput(
+                        t("newRecord.boxNumber"),
+                        boxNumber,
+                        setBoxNumber,
+                        "1",
+                        false,
+                        false
+                      )}
+
+                      {/* Autofilled fields last */}
+                      {renderInput(
+                        t("newRecord.discountPercent"),
+                        selectedDiscount ? `${selectedDiscount.discountPercent}%` : "—",
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.originalPrice"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(originalPrice),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.discountedPrice"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(discountedPrice),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.washerCut"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(washerCut),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Desktop/Tablet/Landscape: Original layout */}
+                      {renderInput(
+                        t("newRecord.discountPercent"),
+                        selectedDiscount ? `${selectedDiscount.discountPercent}%` : "—",
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.originalPrice"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(originalPrice),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.discountedPrice"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(discountedPrice),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+
+                      {renderInput(
+                        t("newRecord.washerCut"),
+                        loadingQuote ? t("newRecord.calculating") : formatMoney(washerCut),
+                        () => {},
+                        undefined,
+                        false,
+                        true
+                      )}
+                    </>
                   )}
                 </View>
 
                 {/* Right Column */}
                 <View style={styles.column}>
-                  <SearchableSelect
-                    label={t("newRecord.carCategory")}
-                    required
-                    valueText={carType ? getCarTypeDisplayLabel(carType) : ""}
-                    options={availableCarTypes.map((c) => ({
-                      key: c,
-                      label: getCarTypeDisplayLabel(c),
-                    }))}
-                    onSelect={(key) => setCarType(key)}
-                  />
-
-                  <SearchableSelect
-                    label={t("newRecord.washType")}
-                    required
-                    valueText={
-                      isCustomService
-                        ? t("newRecord.customService")
-                        : serviceType
-                        ? getWashTypeDisplayLabel(serviceType)
-                        : ""
-                    }
-                    options={[
-                      ...availableWashTypes.map((s) => ({
-                        key: s,
-                        label: getWashTypeDisplayLabel(s),
-                      })),
-                      { key: "__CUSTOM__", label: t("newRecord.customService") },
-                    ]}
-                    onSelect={(key) => {
-                      if (key === "__CUSTOM__") {
-                        setIsCustomService(true);
-                        setServiceType("");
-                        setCustomServiceName("");
-                        setManualPrice("");
-                        setOriginalPrice(null);
-                        setDiscountedPrice(null);
-                        setWasherCut(null);
-                      } else {
-                        setIsCustomService(false);
-                        setServiceType(key);
-                        setCustomServiceName("");
-                        setManualPrice("");
-                      }
-                    }}
-                  />
-
-                  {isCustomService && (
+                  {isMobile && !isMobileLandscape ? (
+                    // Mobile portrait: Right column is empty (all fields in left column)
+                    null
+                  ) : (
+                    // Desktop/Tablet/Landscape: Original right column layout
                     <>
-                      {renderInput(
-                        t("newRecord.customServiceName"),
-                        customServiceName,
-                        setCustomServiceName,
-                        t("newRecord.customServicePlaceholder"),
-                        true,
-                        false
+                      <SearchableSelect
+                        label={t("newRecord.carCategory")}
+                        required
+                        valueText={carType ? getCarTypeDisplayLabel(carType) : ""}
+                        options={availableCarTypes.map((c) => ({
+                          key: c,
+                          label: getCarTypeDisplayLabel(c),
+                        }))}
+                        onSelect={(key) => setCarType(key)}
+                      />
+
+                      <SearchableSelect
+                        label={t("newRecord.washType")}
+                        required
+                        valueText={
+                          isCustomService
+                            ? t("newRecord.customService")
+                            : serviceType
+                            ? getWashTypeDisplayLabel(serviceType)
+                            : ""
+                        }
+                        options={[
+                          ...availableWashTypes.map((s) => ({
+                            key: s,
+                            label: getWashTypeDisplayLabel(s),
+                          })),
+                          { key: "__CUSTOM__", label: t("newRecord.customService") },
+                        ]}
+                        onSelect={(key) => {
+                          if (key === "__CUSTOM__") {
+                            setIsCustomService(true);
+                            setServiceType("");
+                            setCustomServiceName("");
+                            setManualPrice("");
+                            setOriginalPrice(null);
+                            setDiscountedPrice(null);
+                            setWasherCut(null);
+                          } else {
+                            setIsCustomService(false);
+                            setServiceType(key);
+                            setCustomServiceName("");
+                            setManualPrice("");
+                          }
+                        }}
+                      />
+
+                      {isCustomService && (
+                        <>
+                          {renderInput(
+                            t("newRecord.customServiceName"),
+                            customServiceName,
+                            setCustomServiceName,
+                            t("newRecord.customServicePlaceholder"),
+                            true,
+                            false
+                          )}
+                          {renderInput(
+                            t("newRecord.priceManual"),
+                            manualPrice,
+                            setManualPrice,
+                            "0.00",
+                            true,
+                            false
+                          )}
+                        </>
                       )}
+
+                      <SearchableSelect
+                        label={t("newRecord.washerUsername")}
+                        required
+                        disabled={loadingInit}
+                        valueText={selectedWasher ? selectedWasher.username : ""}
+                        options={washers.map((w) => ({ key: String(w.id), label: w.username }))}
+                        onSelect={(key) => {
+                          const id = Number(key);
+                          const w = washers.find((x) => x.id === id) || null;
+                          setSelectedWasher(w);
+                        }}
+                      />
+
                       {renderInput(
-                        t("newRecord.priceManual"),
-                        manualPrice,
-                        setManualPrice,
-                        "0.00",
-                        true,
+                        t("newRecord.boxNumber"),
+                        boxNumber,
+                        setBoxNumber,
+                        "1",
+                        false,
                         false
                       )}
                     </>
                   )}
-
-                  <SearchableSelect
-                    label={t("newRecord.washerUsername")}
-                    required
-                    disabled={loadingInit}
-                    valueText={selectedWasher ? selectedWasher.username : ""}
-                    options={washers.map((w) => ({ key: String(w.id), label: w.username }))}
-                    onSelect={(key) => {
-                      const id = Number(key);
-                      const w = washers.find((x) => x.id === id) || null;
-                      setSelectedWasher(w);
-                    }}
-                  />
-
-                  {renderInput(
-                    t("newRecord.boxNumber"),
-                    boxNumber,
-                    setBoxNumber,
-                    "1",
-                    false,
-                    false
-                  )}
-
                 </View>
               </View>
 
@@ -747,7 +889,7 @@ const createStyles = (isMobile: boolean, isMobileLandscape: boolean, isTablet: b
     flex: 1,
   },
   scrollContent: {
-    padding: isMobileLandscape ? 8 : isMobile ? 6 : isTablet ? 12 : 24,
+    padding: isMobileLandscape ? 8 : isMobile ? 4 : isTablet ? 12 : 24,
     paddingHorizontal: isMobileLandscape ? 12 : undefined,
   },
   card: {
