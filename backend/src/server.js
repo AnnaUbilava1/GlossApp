@@ -13,6 +13,7 @@ import userRoutes from './routes/users.js';
 import vehicleRoutes from './routes/vehicles.js';
 import washerRoutes from './routes/washers.js';
 import typeConfigRoutes from './routes/typeConfig.js';
+import printerRoutes from './routes/printer.js';
 
 // Load environment variables
 dotenv.config();
@@ -94,6 +95,7 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/discount-options', discountOptionsRoutes);
 app.use('/api/types', typeConfigRoutes);
+app.use('/api/printer', printerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
