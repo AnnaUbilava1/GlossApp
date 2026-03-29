@@ -622,6 +622,7 @@ router.post(
       });
 
       const typeLabels = await getTypeLabels(prisma, lang);
+      
       res.status(201).json({ record: recordToLegacy(record, lang, typeLabels), rawRecord: record });
     } catch (error) {
       console.error('Create record error:', error);

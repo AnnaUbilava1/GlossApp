@@ -110,6 +110,8 @@ export default function TypesScreen() {
       router.push("/(admin)/appusers");
     } else if (key === "types") {
       // already here
+    } else if (key === "printer") {
+      router.push("/(admin)/printer");
     }
   };
 
@@ -330,6 +332,7 @@ export default function TypesScreen() {
               { key: "washers", label: t("admin.washers"), icon: "washers" },
               { key: "types", label: t("admin.types"), icon: "types" },
               { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "printer", label: t("admin.printer"), icon: "printer" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}

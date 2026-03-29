@@ -30,7 +30,7 @@ export async function updatePricingMatrix(
 ): Promise<void> {
   console.log("updatePricingMatrix called with:", matrix);
   try {
-    const response = await apiFetch("/api/pricing", {
+    await apiFetch<void>("/api/pricing", {
       method: "PUT",
       body: JSON.stringify({ matrix }),
       headers: {
@@ -38,8 +38,8 @@ export async function updatePricingMatrix(
       },
       token,
     });
-    console.log("updatePricingMatrix response:", response);
-    return response;
+    console.log("updatePricingMatrix response: success");
+    return;
   } catch (error) {
     console.error("updatePricingMatrix error:", error);
     throw error;

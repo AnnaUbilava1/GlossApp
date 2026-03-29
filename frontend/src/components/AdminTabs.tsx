@@ -35,6 +35,7 @@ export default function AdminTabs({
       pricing: "currency-usd",
       types: "tune-variant",
       appusers: "account-multiple",
+      printer: "printer",
     };
     return icons[iconName] || "help-circle";
   };

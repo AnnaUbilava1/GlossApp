@@ -94,6 +94,8 @@ export default function WashersScreen() {
       router.push("/(admin)/types");
     } else if (key === "pricing") {
       router.push("/(admin)/pricing");
+    } else if (key === "printer") {
+      router.push("/(admin)/printer");
     } else if (key === "appusers") {
       router.push("/(admin)/appusers");
     }
@@ -209,6 +211,7 @@ export default function WashersScreen() {
               { key: "washers", label: t("admin.washers"), icon: "washers" },
               { key: "types", label: t("admin.types"), icon: "types" },
               { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "printer", label: t("admin.printer"), icon: "printer" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}

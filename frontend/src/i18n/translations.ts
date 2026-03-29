@@ -295,6 +295,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "admin.appUsers.loadFailed": "ჩატვირთვა ვერ მოხერხდა",
     "admin.appUsers.resetFailed": "პაროლის განახლება ვერ მოხერხდა",
     "admin.appUsers.deleteFailed": "მომხმარებლის წაშლა ვერ მოხერხდა",
+
+    // Admin Printer (placeholder)
+    "admin.printer": "პრინტერი",
+    "admin.printer.pageTitle": "პრინტერი",
+    "admin.printer.subtitle": "მალე დაემატება (setup / printing integration).",
+
   },
   en: {
     // Auth
@@ -543,6 +549,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     "admin.appUsers.loadFailed": "Failed to load users. Please try again.",
     "admin.appUsers.resetFailed": "Failed to reset password. Please try again.",
     "admin.appUsers.deleteFailed": "Failed to delete user. Please try again.",
+
+    // Admin Printer (placeholder)
+    "admin.printer": "Printer",
+    "admin.printer.pageTitle": "Printer",
+    "admin.printer.subtitle": "Coming soon (setup / printing integration).",
 
     // Admin Types (car & wash types config)
     "admin.types": "Types",

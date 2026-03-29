@@ -133,6 +133,8 @@ export default function PricingScreen() {
       router.push("/(admin)/types");
     } else if (key === "pricing") {
       // Already here
+    } else if (key === "printer") {
+      router.push("/(admin)/printer");
     } else if (key === "appusers") {
       router.push("/(admin)/appusers");
     }
@@ -196,19 +198,25 @@ export default function PricingScreen() {
     try {
       setSaving(true);
       setError(null);
+      setSuccessMessage(null);
       console.log("Saving pricing matrix:", pricing);
       await updatePricingMatrix(token, pricing);
       console.log("Pricing matrix saved successfully");
       setSuccessMessage(t("admin.pricing.saveSuccess"));
-      const matrix = await getPricingMatrix(token);
-      const merged: PricingMatrix = {};
-      carTypeCodes.forEach((carCode) => {
-        merged[carCode] = {};
-        washTypeCodes.forEach((washCode) => {
-          merged[carCode][washCode] = matrix[carCode]?.[washCode] ?? 0;
+      try {
+        const matrix = await getPricingMatrix(token);
+        const merged: PricingMatrix = {};
+        carTypeCodes.forEach((carCode) => {
+          merged[carCode] = {};
+          washTypeCodes.forEach((washCode) => {
+            merged[carCode][washCode] = matrix[carCode]?.[washCode] ?? 0;
+          });
         });
-      });
-      setPricing(merged);
+        setPricing(merged);
+      } catch (refreshError) {
+        // Keep success state for the update; refresh is only to sync UI.
+        console.error("Pricing saved but matrix refresh failed:", refreshError);
+      }
     } catch (err) {
       console.error("Error saving pricing:", err);
       const errorMessage = err instanceof Error ? err.message : t("admin.pricing.saveFailed");
@@ -232,6 +240,7 @@ export default function PricingScreen() {
               { key: "washers", label: t("admin.washers"), icon: "washers" },
               { key: "types", label: t("admin.types"), icon: "types" },
               { key: "pricing", label: t("admin.pricing"), icon: "pricing" },
+              { key: "printer", label: t("admin.printer"), icon: "printer" },
               { key: "appusers", label: t("admin.appUsers"), icon: "appusers" },
             ]}
             activeTab={activeTab}
@@ -332,7 +341,7 @@ export default function PricingScreen() {
         duration={4000}
         style={styles.snackbar}
       >
-        {error}
+        <Text style={styles.snackbarText}>{error}</Text>
       </Snackbar>
 
       <Snackbar
@@ -341,7 +350,7 @@ export default function PricingScreen() {
         duration={3000}
         style={[styles.snackbar, { backgroundColor: theme.colors.primaryContainer }]}
       >
-        {successMessage}
+        <Text style={styles.snackbarText}>{successMessage}</Text>
       </Snackbar>
     </SafeAreaView>
   );
@@ -460,6 +469,9 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     marginBottom: 16,
+  },
+  snackbarText: {
+    color: "#000000",
   },
 });
 
